@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Verify Pass Token Storage
 # Author: Mukesh Kesharwani (mkesharw@adobe.com)

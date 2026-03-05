@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o api-server cmd/api-server/main.go
 # Stage 2: Minimal runtime (pass + gnupg for credential vault)
 FROM alpine:3.19
 
-RUN apk --no-cache add ca-certificates pass gnupg && \
+RUN apk --no-cache add ca-certificates pass gnupg bash && \
     adduser -D -g "" -u 1000 appuser
 
 WORKDIR /app
@@ -29,6 +29,9 @@ COPY --from=builder /build/api-server /app/api-server
 COPY --from=builder /build/get_endpoint_vulnerabilities /app/get_endpoint_vulnerabilities
 COPY --from=builder /build/get_endpoint_stats /app/get_endpoint_stats
 COPY --from=builder /build/get_container_vulnerabilities /app/get_container_vulnerabilities
+# Pass helper scripts (verify tokens, update credentials)
+COPY verify_pass_tokens.sh update-pass-credential.sh /app/
+RUN chmod +x /app/verify_pass_tokens.sh /app/update-pass-credential.sh
 
 # Image-owned pass store: use pass-export/ if present (from export-pass-for-docker.sh), else create empty store at build time
 RUN mkdir -p /app/config /app/data /app/.password-store /app/.gnupg

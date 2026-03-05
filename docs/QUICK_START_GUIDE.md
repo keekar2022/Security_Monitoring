@@ -382,7 +382,7 @@ node script.js
    - [Language Migration Guide](./LANGUAGE_MIGRATION_GUIDE.md)
 
 3. **Check Documentation**
-   - [Setup Guide](./SETUP_GUIDE.md)
+   - [Configuration](CONFIGURATION.md) | [Pass & Credentials](PASS_AND_CREDENTIALS.md)
    - [Configuration](./CONFIGURATION.md)
    - [Best Practices](./BEST_PRACTICES.md)
 

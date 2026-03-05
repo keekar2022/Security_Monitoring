@@ -17,14 +17,7 @@ This guide covers all configuration aspects for the Trend Micro Vision One API i
 
 ## 📸 Visual Setup Guide
 
-**NEW:** For visual step-by-step instructions with screenshots:
-- **[API Key Setup Guide (Visual Walkthrough)](API_KEY_SETUP_GUIDE.md)** - Complete guide showing how to:
-  - Create custom roles in Trend Vision One
-  - Generate API keys with proper permissions
-  - Store credentials securely in Pass
-  - Verify and test configuration
-
-This guide below provides technical configuration details. The visual guide shows you the exact UI steps.
+For setup flow and credential storage, see [PASS_AND_CREDENTIALS.md](PASS_AND_CREDENTIALS.md) and [INDEX.md](INDEX.md).
 
 ---
 

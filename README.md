@@ -67,10 +67,10 @@ Integration-API-Dev/
 │   └── README.md                          # Go-specific documentation
 │
 ├── docs/                                  # 📚 Complete Documentation
-│   ├── GO_MIGRATION_GUIDE.md             # Migration guide & API server docs
-│   ├── CONTAINER_SECURITY.md             # Container vulnerability guide
+│   ├── INDEX.md                          # Documentation index (start here)
+│   ├── FEATURES.md                       # Container & endpoint scanning
 │   ├── CONFIGURATION.md                  # Configuration reference
-│   ├── PASS_GUIDE.md                     # Secure credential management
+│   ├── PASS_AND_CREDENTIALS.md           # Pass & credential storage
 │   └── ...                                # Additional guides
 │
 ├── lib/                                   # (Deprecated Python library)
@@ -239,7 +239,7 @@ open http://localhost:8080/
 }
 ```
 
-📚 **See**: [Go Migration Guide](docs/GO_MIGRATION_GUIDE.md) for complete API documentation
+📚 **See**: [MIGRATION](docs/MIGRATION.md) and [go/README](go/README.md) for API server and Go details
 
 ---
 
@@ -352,7 +352,7 @@ pass show trendmicro/production/api_token
 
 Tools automatically retrieve credentials from `pass`.
 
-📚 **See**: [Pass Guide](docs/PASS_GUIDE.md) | [Configuration Guide](docs/CONFIGURATION.md)
+📚 **See**: [Pass & Credentials](docs/PASS_AND_CREDENTIALS.md) | [Configuration](docs/CONFIGURATION.md)
 
 ---
 
@@ -439,11 +439,11 @@ WantedBy=multi-user.target
 
 | Document | Description |
 |----------|-------------|
-| [Go Migration Guide](docs/GO_MIGRATION_GUIDE.md) | Complete Go guide & API server docs |
-| [Container Security](docs/CONTAINER_SECURITY.md) | Vulnerability scanning guide |
-| [Configuration](docs/CONFIGURATION.md) | Configuration reference |
-| [Pass Guide](docs/PASS_GUIDE.md) | Secure credential management |
-| [Index](docs/INDEX.md) | Complete documentation index |
+| [Index](docs/INDEX.md) | Documentation index (start here) |
+| [Quick Start](docs/QUICK_START_GUIDE.md) | Get running in minutes |
+| [Configuration](docs/CONFIGURATION.md) | Config reference |
+| [Pass & Credentials](docs/PASS_AND_CREDENTIALS.md) | Credential storage |
+| [Features](docs/FEATURES.md) | Container & endpoint scanning |
 
 ---
 
