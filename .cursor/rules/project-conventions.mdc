@@ -1,0 +1,78 @@
+---
+description: Project conventions and AI assistant guidelines for KACI Parental Control
+alwaysApply: true
+---
+
+# Project Conventions
+
+## Documentation Files
+
+**NEVER proactively create documentation files (*.md) or README files.**
+
+Only create documentation files if explicitly requested by the user.
+
+### ❌ BAD:
+```
+User: "Fix the gaming usage bug"
+Assistant: [Fixes code] + [Creates 7 .md files unprompted]
+```
+
+### ✅ GOOD:
+```
+User: "Fix the gaming usage bug"
+Assistant: [Fixes code only]
+Assistant: "Would you like me to create documentation for this fix?"
+```
+
+---
+
+## File Creation Rules
+
+1. **Code Files**: Create as needed to complete tasks ✅
+2. **Documentation (.md)**: ASK FIRST ⚠️
+3. **README files**: ASK FIRST ⚠️
+4. **Config files**: Create as needed ✅
+
+---
+
+## Script Updates
+
+When updating existing scripts:
+- ✅ Update the EXISTING file
+- ❌ Don't create duplicate files with different names
+- ✅ Maintain backward compatibility with cron jobs
+
+### Example:
+```bash
+# If auto_update.sh exists and is in cron
+# ✅ Update: auto_update.sh
+# ❌ Don't create: auto_update_new.sh or auto_update_v2.sh
+```
+
+---
+
+## Git Commits
+
+When creating commits:
+1. Include ALL modified files
+2. Write clear, descriptive commit messages
+3. Follow existing commit message patterns in the repo
+4. Check git log for style before committing
+
+---
+
+## Package Version Updates
+
+When updating VERSION file:
+- Update all references consistently
+- Check: VERSION, pkg-manifest.ucl, info.xml
+- Verify version number format (X.Y.Z)
+
+---
+
+## Best Practices
+
+- Read existing patterns before making changes
+- Maintain consistency with existing code style
+- Check for duplicate functionality before adding new features
+- Ask clarifying questions when requirements are ambiguous

@@ -1,0 +1,102 @@
+---
+description: OWASP Top 10, API Security, and GenAI security standards - prevent introduction of these vulnerabilities
+alwaysApply: true
+---
+
+# OWASP Security Standards
+
+All code MUST align with **OWASP Top 10 2025**, **OWASP API Security Top 10**, and **OWASP Top 10 for GenAI**. Do not introduce vulnerabilities in these categories.
+
+## OWASP Top 10 2025 (Application Security)
+
+### A01: Broken Access Control
+- **Rule**: Enforce authorization on every endpoint and data access. Default deny.
+- **Apply**: Record ownership checks, disable directory listing, rate limit APIs, validate CORS.
+```php
+// ✅ Verify user can access resource before returning data
+if ($device_owner !== $current_user && !$current_user['is_admin']) {
+    pc_log("Unauthorized access attempt", 'warning', array('event.action' => 'access_denied', 'resource' => 'device'));
+    return 403;
+}
+```
+
+### A02: Security Misconfiguration
+- **Rule**: Never expose stack traces, internal paths, or default credentials.
+- **Apply**: Generic error messages to users; log details server-side. Disable debug in production.
+
+### A03: Software Supply Chain Failures
+- **Rule**: Verify integrity of dependencies and external code.
+- **Apply**: Use lock files, pin versions, avoid pulling untrusted code at runtime.
+
+### A04: Cryptographic Failures
+- **Rule**: Use strong, modern crypto. Never roll your own. No MD5/SHA1 for security.
+- **Apply**: TLS 1.2+, bcrypt/argon2 for passwords, secure random for tokens.
+
+### A05: Injection
+- **Rule**: Never concatenate user input into queries, commands, or output. Use parameterized queries and allowlists.
+- **Apply**: Prepared statements, input validation, output encoding for context (HTML, SQL, shell).
+```php
+// ✅ Parameterized / validated; ❌ NEVER: $query = "SELECT * WHERE id = '$id'"
+$stmt = $pdo->prepare("SELECT * FROM devices WHERE id = ?");
+$stmt->execute([$validated_id]);
+```
+
+### A06: Insecure Design
+- **Rule**: Security in design phase. Threat model critical flows; principle of least privilege.
+
+### A07: Authentication Failures
+- **Rule**: Strong auth and session management. Secure cookies (httpOnly, secure, sameSite), account lockout, MFA where applicable.
+
+### A08: Software and Data Integrity Failures
+- **Rule**: Verify integrity of code, config, and CI/CD. Sign artifacts; verify signatures.
+
+### A09: Security Logging & Alerting Failures
+- **Rule**: Log security events (auth success/failure, access denied, validation failures) with structured attributes. Alert on suspicious patterns.
+- **Apply**: Use project `pc_log()` with `event.action`, `event.outcome`, `client.address`; never log secrets.
+
+### A10: Mishandling Exceptional Conditions
+- **Rule**: Handle errors securely. Never expose stack traces or internal details to users.
+- **Apply**: Catch specific exceptions; log with context; return generic messages (e.g. "An error occurred").
+
+---
+
+## OWASP API Security Top 10
+
+- **API1 (BOLA)**: Verify ownership before returning/updating resources (e.g. device/profile belongs to caller).
+- **API2**: Use standard auth (e.g. session/cookie or token); no custom auth in request body.
+- **API3**: Whitelist allowed fields on update; reject unknown or sensitive fields.
+- **API4**: Rate limit all API endpoints to prevent abuse.
+- **API5**: Enforce role/permission checks for admin or sensitive operations.
+- **API6**: Rate limit sensitive flows (e.g. override, config change).
+- **API7 (SSRF)**: Validate and constrain URLs before server-side fetch (allowlist host/scheme).
+- **API8**: Secure API config (HTTPS, correct headers, no verbose errors).
+- **API9**: Document and version APIs; retire deprecated versions.
+- **API10**: Validate and sanitize data from third-party APIs; set timeouts.
+
+---
+
+## OWASP Top 10 for GenAI
+
+- **LLM01 (Prompt Injection)**: Isolate user input from system prompts; use templates; sanitize/validate user input.
+- **LLM02 (Insecure Output)**: Treat model output as untrusted; encode/escape before rendering (e.g. no raw HTML from AI).
+- **LLM03–LLM05**: Use trusted data and models; verify sources; limit prompt size and rate.
+- **LLM06 (Sensitive Disclosure)**: Never send PII/secrets in prompts; redact before sending to any AI service.
+- **LLM07–LLM08**: Validate plugin/agent inputs; require human approval for critical actions.
+- **LLM09–LLM10**: Validate AI outputs; do not over-rely; protect model and API access.
+
+---
+
+## Implementation Checklist (Before Merge)
+
+- [ ] No raw user input in queries, commands, or HTML (injection).
+- [ ] Authorization checked on every sensitive action and data access (access control).
+- [ ] Errors return generic messages; details only in logs (misconfiguration / exceptional conditions).
+- [ ] No secrets or PII in logs or in prompts to AI (logging / GenAI).
+- [ ] Dependencies pinned and reviewed (supply chain).
+- [ ] Security events logged with structured attributes (logging & alerting).
+
+## References
+
+- [OWASP Top 10 2025](https://owasp.org/Top10/)
+- [OWASP API Security Top 10](https://owasp.org/API-Security/)
+- [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/)

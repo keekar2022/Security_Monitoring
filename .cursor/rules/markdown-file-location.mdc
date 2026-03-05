@@ -1,0 +1,56 @@
+---
+description: All markdown files must be created in the docs/ subfolder
+alwaysApply: true
+---
+
+# Markdown File Location Rule
+
+## CRITICAL: Documentation File Placement
+
+When creating ANY new `.md` (markdown) files in this project, you MUST:
+
+1. **Always place them in the `docs/` subfolder**
+2. **Never create `.md` files in the project root** (except README.md which already exists)
+3. **Check if `docs/` exists before creating files** - create it if needed
+
+## Examples
+
+### ✅ CORRECT - Files in docs/ subfolder
+
+```
+docs/NEW_FEATURE.md
+docs/ARCHITECTURE.md
+docs/API_GUIDE.md
+docs/DEPLOYMENT.md
+```
+
+### ❌ INCORRECT - Files in root
+
+```
+NEW_FEATURE.md          # Wrong!
+ARCHITECTURE.md         # Wrong!
+API_GUIDE.md           # Wrong!
+```
+
+## Existing Documentation Structure
+
+The project already has these documentation files in `docs/`:
+- `docs/SETUP.md`
+- `docs/USER_GUIDE.md`
+- `docs/TROUBLESHOOTING.md`
+- `docs/UNSUBSCRIBE.md`
+- `docs/CONSOLIDATION.md`
+- `docs/INDEX.md`
+
+Follow this established pattern for ALL new markdown documentation.
+
+## Implementation
+
+Before creating a new markdown file:
+1. Verify the `docs/` directory exists
+2. Place the file at: `docs/FILENAME.md`
+3. Update `docs/INDEX.md` if the new file is significant documentation
+
+## Exception
+
+The ONLY exception is `README.md` which should remain in the project root as it's the main entry point.

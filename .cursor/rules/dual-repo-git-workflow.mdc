@@ -1,0 +1,155 @@
+---
+description: Git workflow for dual repository setup (Adobe + Personal repos)
+alwaysApply: true
+---
+
+# Dual Repository Git Workflow
+
+This project maintains two Git remotes: Adobe (corporate) and Personal repositories.
+
+## Git Remotes Configuration
+
+```bash
+adobe    https://github.com/AdobeManagedServices/OSCAL-Reports.git
+personal https://github.com/keekar2022/OSCAL-Reports.git
+```
+
+## CRITICAL: Always Switch Git User Before Committing
+
+### Rule: Check User BEFORE Every Commit/Push
+
+**ALWAYS run these commands BEFORE creating ANY commit:**
+
+```bash
+# Check current Git user
+git config user.name
+git config user.email
+
+# Check which remote you're about to push to
+git remote -v
+```
+
+### Git User Configurations
+
+#### For Adobe Repository (AdobeManagedServices)
+```bash
+git config user.name "Mukesh Kesharwani"
+git config user.email "mukesh.kesharwani@adobe.com"
+```
+
+#### For Personal Repository (keekar2022)
+```bash
+git config user.name "keekar2022"
+git config user.email "mukesh.kesharwani@gmail.com"
+```
+
+## Commit and Push Workflow
+
+### ❌ WRONG - Don't Do This
+
+```bash
+# BAD: Committing without checking/setting user
+git add .
+git commit -m "feat: add feature"
+git push adobe Development
+git push personal Development
+```
+
+**Problem**: Commits to Adobe repo will have wrong author (personal email).
+
+### ✅ CORRECT - Always Do This
+
+```bash
+# Step 1: Check/Set Git user for Adobe commits
+git config user.name "Mukesh Kesharwani"
+git config user.email "mukesh.kesharwani@adobe.com"
+
+# Step 2: Verify the configuration
+git config user.name    # Should show: Mukesh Kesharwani
+git config user.email   # Should show: mukesh.kesharwani@adobe.com
+
+# Step 3: Stage and commit
+git add <files>
+git commit -m "feat: descriptive commit message"
+
+# Step 4: Push to both remotes
+git push adobe Development
+git push personal Development
+```
+
+## AI Agent Instructions
+
+When asked to "commit" or "push" or "check in code to both repos":
+
+1. **ALWAYS check current Git user first**:
+   ```bash
+   git config user.name && git config user.email
+   ```
+
+2. **If user is NOT set to Adobe credentials, SET IT**:
+   ```bash
+   git config user.name "Mukesh Kesharwani"
+   git config user.email "mukesh.kesharwani@adobe.com"
+   ```
+
+3. **Verify the change**:
+   ```bash
+   git config user.name    # Verify: Mukesh Kesharwani
+   git config user.email   # Verify: mukesh.kesharwani@adobe.com
+   ```
+
+4. **Then proceed with commit and push**:
+   ```bash
+   git add <files>
+   git commit -m "commit message"
+   git push adobe Development
+   git push personal Development
+   ```
+
+## Quick Reference Commands
+
+```bash
+# Check current user
+git config user.name && git config user.email
+
+# Switch to Adobe user
+git config user.name "Mukesh Kesharwani" && \
+git config user.email "mukesh.kesharwani@adobe.com"
+
+# Switch to Personal user (if needed)
+git config user.name "keekar2022" && \
+git config user.email "mukesh.kesharwani@gmail.com"
+
+# Verify remotes
+git remote -v
+
+# Push to both repos
+git push adobe Development && git push personal Development
+```
+
+## Why This Matters
+
+- **Adobe repository**: Corporate commits must show proper corporate author
+- **Audit trail**: Correct attribution for compliance and tracking
+- **Professional**: Maintains proper separation between corporate and personal work
+- **Git history**: Clean, accurate commit history with correct authors
+
+## Branch Strategy
+
+Both repositories follow the same branch workflow:
+```
+Development → Quality_Test → Pre_Prod → main
+```
+
+Always work on `Development` branch for new features.
+
+## Common Mistakes to Avoid
+
+1. ❌ Forgetting to check/set user before commit
+2. ❌ Using personal email for Adobe repository commits
+3. ❌ Pushing to only one repository (should push to both)
+4. ❌ Creating commits with mixed/wrong author attribution
+
+## Automation Note
+
+The user configuration is **per-repository** (local config), NOT global. Each time you work on this project, verify the user is set correctly before committing.

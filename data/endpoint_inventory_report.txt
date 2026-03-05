@@ -1,0 +1,389 @@
+
+
+====================================================================================================
+TREND MICRO VISION ONE - ENDPOINT INVENTORY & STATISTICS REPORT
+====================================================================================================
+Generated: 2026-01-27 00:00:55 UTC
+Environment: Quality & Test
+Business: Adobe Managed Services QTE
+Region: Australia (au)
+Data Source: OAT (Observed Attack Techniques) Detections
+
+SUMMARY
+----------------------------------------------------------------------------------------------------
+Total Endpoints:           1
+Total Detections:          109
+  Critical Risk:           0
+  High Risk:               0
+  Medium Risk:             1
+  Low Risk:                17
+
+ENDPOINT DETAILS
+----------------------------------------------------------------------------------------------------
+Endpoint Name                                 OS                          Detections     Risk
+----------------------------------------------------------------------------------------------------
+QualcommCN-dev-dispatcher1cnnorth1-b86        Linux Red Hat Enterpris            109       19
+----------------------------------------------------------------------------------------------------
+
+TOP 10 HIGHEST RISK ENDPOINTS
+----------------------------------------------------------------------------------------------------
+
+1. QualcommCN-dev-dispatcher1cnnorth1-b86
+   GUID: 1282573b-8d6e-48a1-adb5-247a3b583f8d
+   IPs: 10.43.0.22, fe80::15:c0ff:fe59:27fd
+   OS: Linux Red Hat Enterprise 8
+   Product: 751 v1.0.409
+   Detections: 109 (Crit:0, High:0, Med:1, Low:17)
+   Risk Score: 19
+   MITRE Techniques: T1021.004, T1033, T1057, T1059.004, T1082
+
+====================================================================================================
+
+IMPORTANT NOTE:
+----------------------------------------------------------------------------------------------------
+This report shows endpoint inventory derived from OAT detection data.
+It includes:
+  ✅ Endpoints with recent security detections
+  ✅ Detection counts and risk levels
+  ✅ OS and product information
+  ✅ MITRE ATT&CK technique coverage
+
+It does NOT include:
+  ❌ CVE vulnerability data (requires ASRM module)
+  ❌ Patch status
+  ❌ Complete endpoint inventory (only endpoints with detections)
+
+For full vulnerability scanning, enable Attack Surface Risk Management (ASRM).
+====================================================================================================
+
+Portal: https://portal.au.xdr.trendmicro.com/
+API Documentation: https://automation.trendmicro.com/xdr/api-v3/
+
+
+====================================================================================================
+TREND MICRO VISION ONE - ENDPOINT INVENTORY & STATISTICS REPORT
+====================================================================================================
+Generated: 2026-01-27 00:01:12 UTC
+Environment: Production (Australia)
+Business: Adobe-MS-Au
+Region: Australia (au)
+Data Source: OAT (Observed Attack Techniques) Detections
+
+SUMMARY
+----------------------------------------------------------------------------------------------------
+Total Endpoints:           1
+Total Detections:          109
+  Critical Risk:           0
+  High Risk:               0
+  Medium Risk:             1
+  Low Risk:                17
+
+ENDPOINT DETAILS
+----------------------------------------------------------------------------------------------------
+Endpoint Name                                 OS                          Detections     Risk
+----------------------------------------------------------------------------------------------------
+QualcommCN-dev-dispatcher1cnnorth1-b86        Linux Red Hat Enterpris            109       19
+----------------------------------------------------------------------------------------------------
+
+TOP 10 HIGHEST RISK ENDPOINTS
+----------------------------------------------------------------------------------------------------
+
+1. QualcommCN-dev-dispatcher1cnnorth1-b86
+   GUID: 1282573b-8d6e-48a1-adb5-247a3b583f8d
+   IPs: 10.43.0.22, fe80::15:c0ff:fe59:27fd
+   OS: Linux Red Hat Enterprise 8
+   Product: 751 v1.0.409
+   Detections: 109 (Crit:0, High:0, Med:1, Low:17)
+   Risk Score: 19
+   MITRE Techniques: T1021.004, T1033, T1057, T1059.004, T1082
+
+====================================================================================================
+
+IMPORTANT NOTE:
+----------------------------------------------------------------------------------------------------
+This report shows endpoint inventory derived from OAT detection data.
+It includes:
+  ✅ Endpoints with recent security detections
+  ✅ Detection counts and risk levels
+  ✅ OS and product information
+  ✅ MITRE ATT&CK technique coverage
+
+It does NOT include:
+  ❌ CVE vulnerability data (requires ASRM module)
+  ❌ Patch status
+  ❌ Complete endpoint inventory (only endpoints with detections)
+
+For full vulnerability scanning, enable Attack Surface Risk Management (ASRM).
+====================================================================================================
+
+Portal: https://portal.au.xdr.trendmicro.com/
+API Documentation: https://automation.trendmicro.com/xdr/api-v3/
+
+
+====================================================================================================
+TREND MICRO VISION ONE - ENDPOINT INVENTORY & STATISTICS REPORT
+====================================================================================================
+Generated: 2026-01-27 00:19:42 UTC
+Environment: Quality & Test
+Business: Adobe Managed Services QTE
+Region: Australia (au)
+Data Source: OAT (Observed Attack Techniques) Detections
+
+SUMMARY
+----------------------------------------------------------------------------------------------------
+Total Endpoints:           1
+Total Detections:          88
+  Critical Risk:           0
+  High Risk:               0
+  Medium Risk:             1
+  Low Risk:                0
+
+ENDPOINT DETAILS
+----------------------------------------------------------------------------------------------------
+Endpoint Name                                 OS                          Detections     Risk
+----------------------------------------------------------------------------------------------------
+QualcommCN-dev-dispatcher1cnnorth1-b86        Linux Red Hat Enterpris             88        2
+----------------------------------------------------------------------------------------------------
+
+TOP 10 HIGHEST RISK ENDPOINTS
+----------------------------------------------------------------------------------------------------
+
+1. QualcommCN-dev-dispatcher1cnnorth1-b86
+   GUID: 1282573b-8d6e-48a1-adb5-247a3b583f8d
+   IPs: 10.43.0.22, fe80::15:c0ff:fe59:27fd
+   OS: Linux Red Hat Enterprise 8
+   Product: 751 v1.0.409
+   Detections: 88 (Crit:0, High:0, Med:1, Low:0)
+   Risk Score: 2
+   MITRE Techniques: T1021.004, T1057, T1059.004, T1070.002, T1082
+
+====================================================================================================
+
+IMPORTANT NOTE:
+----------------------------------------------------------------------------------------------------
+This report shows endpoint inventory derived from OAT detection data.
+It includes:
+  ✅ Endpoints with recent security detections
+  ✅ Detection counts and risk levels
+  ✅ OS and product information
+  ✅ MITRE ATT&CK technique coverage
+
+It does NOT include:
+  ❌ CVE vulnerability data (requires ASRM module)
+  ❌ Patch status
+  ❌ Complete endpoint inventory (only endpoints with detections)
+
+For full vulnerability scanning, enable Attack Surface Risk Management (ASRM).
+====================================================================================================
+
+Portal: https://portal.au.xdr.trendmicro.com/
+API Documentation: https://automation.trendmicro.com/xdr/api-v3/
+
+
+====================================================================================================
+TREND MICRO VISION ONE - ENDPOINT INVENTORY & STATISTICS REPORT
+====================================================================================================
+Generated: 2026-01-27 00:20:09 UTC
+Environment: Production (Australia)
+Business: Adobe-MS-Au
+Region: Australia (au)
+Data Source: OAT (Observed Attack Techniques) Detections
+
+SUMMARY
+----------------------------------------------------------------------------------------------------
+Total Endpoints:           1
+Total Detections:          88
+  Critical Risk:           0
+  High Risk:               0
+  Medium Risk:             1
+  Low Risk:                0
+
+ENDPOINT DETAILS
+----------------------------------------------------------------------------------------------------
+Endpoint Name                                 OS                          Detections     Risk
+----------------------------------------------------------------------------------------------------
+QualcommCN-dev-dispatcher1cnnorth1-b86        Linux Red Hat Enterpris             88        2
+----------------------------------------------------------------------------------------------------
+
+TOP 10 HIGHEST RISK ENDPOINTS
+----------------------------------------------------------------------------------------------------
+
+1. QualcommCN-dev-dispatcher1cnnorth1-b86
+   GUID: 1282573b-8d6e-48a1-adb5-247a3b583f8d
+   IPs: 10.43.0.22, fe80::15:c0ff:fe59:27fd
+   OS: Linux Red Hat Enterprise 8
+   Product: 751 v1.0.409
+   Detections: 88 (Crit:0, High:0, Med:1, Low:0)
+   Risk Score: 2
+   MITRE Techniques: T1021.004, T1057, T1059.004, T1070.002, T1082
+
+====================================================================================================
+
+IMPORTANT NOTE:
+----------------------------------------------------------------------------------------------------
+This report shows endpoint inventory derived from OAT detection data.
+It includes:
+  ✅ Endpoints with recent security detections
+  ✅ Detection counts and risk levels
+  ✅ OS and product information
+  ✅ MITRE ATT&CK technique coverage
+
+It does NOT include:
+  ❌ CVE vulnerability data (requires ASRM module)
+  ❌ Patch status
+  ❌ Complete endpoint inventory (only endpoints with detections)
+
+For full vulnerability scanning, enable Attack Surface Risk Management (ASRM).
+====================================================================================================
+
+Portal: https://portal.au.xdr.trendmicro.com/
+API Documentation: https://automation.trendmicro.com/xdr/api-v3/
+
+
+====================================================================================================
+TREND MICRO VISION ONE - ENDPOINT INVENTORY & STATISTICS REPORT
+====================================================================================================
+Generated: 2026-01-27 18:19:23 UTC
+Environment: Quality & Test
+Business: Adobe Managed Services QTE
+Region: Australia (au)
+Data Source: OAT (Observed Attack Techniques) Detections
+
+SUMMARY
+----------------------------------------------------------------------------------------------------
+Total Endpoints:           1
+Total Detections:          88
+  Critical Risk:           0
+  High Risk:               0
+  Medium Risk:             1
+  Low Risk:                0
+
+ENDPOINT DETAILS
+----------------------------------------------------------------------------------------------------
+Endpoint Name                                 OS                          Detections     Risk
+----------------------------------------------------------------------------------------------------
+QualcommCN-dev-dispatcher1cnnorth1-b86        Linux Red Hat Enterpris             88        2
+----------------------------------------------------------------------------------------------------
+
+TOP 10 HIGHEST RISK ENDPOINTS
+----------------------------------------------------------------------------------------------------
+
+1. QualcommCN-dev-dispatcher1cnnorth1-b86
+   GUID: 1282573b-8d6e-48a1-adb5-247a3b583f8d
+   IPs: 10.43.0.22, fe80::15:c0ff:fe59:27fd
+   OS: Linux Red Hat Enterprise 8
+   Product: 751 v1.0.409
+   Detections: 88 (Crit:0, High:0, Med:1, Low:0)
+   Risk Score: 2
+   MITRE Techniques: T1021.004, T1057, T1059.004, T1082, T1087
+
+====================================================================================================
+
+IMPORTANT NOTE:
+----------------------------------------------------------------------------------------------------
+This report shows endpoint inventory derived from OAT detection data.
+It includes:
+  ✅ Endpoints with recent security detections
+  ✅ Detection counts and risk levels
+  ✅ OS and product information
+  ✅ MITRE ATT&CK technique coverage
+
+It does NOT include:
+  ❌ CVE vulnerability data (requires ASRM module)
+  ❌ Patch status
+  ❌ Complete endpoint inventory (only endpoints with detections)
+
+For full vulnerability scanning, enable Attack Surface Risk Management (ASRM).
+====================================================================================================
+
+Portal: https://portal.au.xdr.trendmicro.com/
+API Documentation: https://automation.trendmicro.com/xdr/api-v3/
+
+
+====================================================================================================
+TREND MICRO VISION ONE - ENDPOINT INVENTORY & STATISTICS REPORT
+====================================================================================================
+Generated: 2026-01-27 18:19:45 UTC
+Environment: Production (Australia)
+Business: Adobe-MS-Au
+Region: Australia (au)
+Data Source: OAT (Observed Attack Techniques) Detections
+
+SUMMARY
+----------------------------------------------------------------------------------------------------
+Total Endpoints:           1
+Total Detections:          86
+  Critical Risk:           0
+  High Risk:               0
+  Medium Risk:             1
+  Low Risk:                0
+
+ENDPOINT DETAILS
+----------------------------------------------------------------------------------------------------
+Endpoint Name                                 OS                          Detections     Risk
+----------------------------------------------------------------------------------------------------
+QualcommCN-dev-dispatcher1cnnorth1-b86        Linux Red Hat Enterpris             86        2
+----------------------------------------------------------------------------------------------------
+
+TOP 10 HIGHEST RISK ENDPOINTS
+----------------------------------------------------------------------------------------------------
+
+1. QualcommCN-dev-dispatcher1cnnorth1-b86
+   GUID: 1282573b-8d6e-48a1-adb5-247a3b583f8d
+   IPs: 10.43.0.22, fe80::15:c0ff:fe59:27fd
+   OS: Linux Red Hat Enterprise 8
+   Product: 751 v1.0.409
+   Detections: 86 (Crit:0, High:0, Med:1, Low:0)
+   Risk Score: 2
+   MITRE Techniques: T1021.004, T1057, T1059.004, T1082, T1087
+
+====================================================================================================
+
+IMPORTANT NOTE:
+----------------------------------------------------------------------------------------------------
+This report shows endpoint inventory derived from OAT detection data.
+It includes:
+  ✅ Endpoints with recent security detections
+  ✅ Detection counts and risk levels
+  ✅ OS and product information
+  ✅ MITRE ATT&CK technique coverage
+
+It does NOT include:
+  ❌ CVE vulnerability data (requires ASRM module)
+  ❌ Patch status
+  ❌ Complete endpoint inventory (only endpoints with detections)
+
+For full vulnerability scanning, enable Attack Surface Risk Management (ASRM).
+====================================================================================================
+
+Portal: https://portal.au.xdr.trendmicro.com/
+API Documentation: https://automation.trendmicro.com/xdr/api-v3/
+
+
+====================================================================================================
+TREND MICRO VISION ONE - ENDPOINT INVENTORY & STATISTICS REPORT
+====================================================================================================
+Generated: 2026-03-03 18:51:14 UTC
+Environment: Production (Australia)
+Business: Adobe-MS-Au
+Region: Australia (au)
+Data Source: OAT (Observed Attack Techniques) Detections
+
+SUMMARY
+----------------------------------------------------------------------------------------------------
+Total Endpoints:           2
+Total Detections:          18
+  Critical Risk:           0
+  High Risk:               0
+  Medium Risk:             0
+  Low Risk:                0
+
+ENDPOINT DETAILS
+----------------------------------------------------------------------------------------------------
+Endpoint Name                                 OS                          Detections     Risk
+----------------------------------------------------------------------------------------------------
+sa-dev01-65-author1apsoutheast2-28574609      Linux Red Hat Enterpris              9        0
+sa-dev02-65-author1apsoutheast2-28575379      Linux Red Hat Enterpris              9        0
+----------------------------------------------------------------------------------------------------
+
+====================================================================================================

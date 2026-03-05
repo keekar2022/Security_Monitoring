@@ -1,0 +1,122 @@
+{
+  "version": "2.0.0",
+  "last_updated": "2026-02-04",
+  "description": "Trend Micro Vision One API credentials - KEEP SECURE - Production and Quality/Test",
+  "maintainer": "Mukesh Kesharwani (mkesharw@adobe.com)",
+  "current_environment": "production",
+  "environments": {
+    "production": {
+      "deployment": {
+        "business_name": "Adobe-AMS-Global",
+        "business_id": "ec367c49-2f23-49a3-a55c-a062f7d6583a",
+        "region": "us",
+        "region_name": "United States (Global)",
+        "portal_url": "https://portal.xdr.trendmicro.com/",
+        "api_base_url": "https://api.xdr.trendmicro.com"
+      },
+      "api_credentials": {
+        "api_token": "STORED_IN_PASS_VAULT",
+        "token_type": "Bearer",
+        "issued_at": 1768882796,
+        "expires_at": 1800418796,
+        "token_use": "customer"
+      },
+      "token_info": {
+        "decoded": {
+          "cid": "ec367c49-2f23-49a3-a55c-a062f7d6583a",
+          "cpid": "svp",
+          "ppid": "cus",
+          "id": "b06803cc-b035-4d11-8b0b-e5ca3f78e29d",
+          "tokenUse": "customer"
+        },
+        "issued_date": "2026-01-19",
+        "expiry_date": "2027-01-19",
+        "valid_for_days": 365,
+        "status": "active"
+      }
+    },
+    "production_au": {
+      "deployment": {
+        "business_name": "Adobe-MS-Au",
+        "business_id": "cc305c0c-a560-4fa9-9481-46a77278122e",
+        "region": "au",
+        "region_name": "Australia",
+        "portal_url": "https://portal.au.xdr.trendmicro.com/",
+        "api_base_url": "https://api.au.xdr.trendmicro.com"
+      },
+      "api_credentials": {
+        "api_token": "STORED_IN_PASS_VAULT",
+        "token_type": "Bearer",
+        "issued_at": 1768943492,
+        "expires_at": 1800479491,
+        "token_use": "customer"
+      },
+      "token_info": {
+        "decoded": {
+          "cid": "cc305c0c-a560-4fa9-9481-46a77278122e",
+          "cpid": "svp",
+          "ppid": "cus",
+          "id": "1ec5d92b-000e-47d2-98f4-616938c786da",
+          "tokenUse": "customer"
+        },
+        "issued_date": "2026-01-21",
+        "expiry_date": "2027-01-21",
+        "valid_for_days": 364,
+        "status": "active"
+      }
+    },
+    "quality_test": {
+      "deployment": {
+        "business_name": "Adobe Managed Services QTE",
+        "business_id": "c732de94-ce77-4540-89d4-7f5c2c2032f6",
+        "region": "au",
+        "region_name": "Australia",
+        "portal_url": "https://portal.au.xdr.trendmicro.com/",
+        "api_base_url": "https://api.au.xdr.trendmicro.com"
+      },
+      "api_credentials": {
+        "api_token": "STORED_IN_PASS_VAULT",
+        "token_type": "Bearer",
+        "issued_at": 0,
+        "expires_at": 0,
+        "token_use": "customer"
+      },
+      "token_info": {
+        "decoded": {
+          "cid": "c732de94-ce77-4540-89d4-7f5c2c2032f6",
+          "cpid": "svp",
+          "ppid": "cus",
+          "id": "qte-token",
+          "tokenUse": "customer"
+        },
+        "issued_date": "",
+        "expiry_date": "",
+        "valid_for_days": 0,
+        "status": "active"
+      }
+    }
+  },
+  "security": {
+    "permissions": "0600",
+    "owner_only": true,
+    "git_ignored": true,
+    "rotation_policy": "Rotate every 90 days or before expiry",
+    "last_rotation": "2026-01-20",
+    "api_tokens": {
+      "storage": "pass (GPG-encrypted)",
+      "location": "~/.password-store/TrendMicro/",
+      "note": "API tokens are NOT stored in this file for security. Use 'pass' to retrieve tokens."
+    }
+  },
+  "notes": [
+    "This file contains credentials for Production and Quality/Test environments",
+    "production: Adobe-AMS-Global (US/Global region)",
+    "production_au: Adobe-MS-Au (Australia region)",
+    "quality_test: Adobe Managed Services QTE (Australia) - store token in pass: TrendMicro/quality_test/api_token",
+    "Current active environment: production",
+    "Token expiry dates: production (2027-01-19), production_au (2027-01-21)",
+    "Rotate tokens every 90 days as per best practices",
+    "Never commit this file to version control",
+    "Keep file permissions at 600 (owner read/write only)"
+  ]
+}

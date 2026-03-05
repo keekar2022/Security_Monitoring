@@ -1,0 +1,98 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-02-04",
+  "description": "Production and Quality/Test environment configurations for Trend Micro Vision One",
+  "maintainer": "Mukesh Kesharwani (mkesharw@adobe.com)",
+  "current_environment": "production",
+  "environments": {
+    "production": {
+      "name": "Production - Adobe AMS Global",
+      "environment_label": "Production",
+      "region": "us",
+      "region_name": "United States (Global)",
+      "api_base_url": "https://api.xdr.trendmicro.com",
+      "portal_url": "https://portal.xdr.trendmicro.com/",
+      "business_id": "ec367c49-2f23-49a3-a55c-a062f7d6583a",
+      "business_name": "Adobe-AMS-Global",
+      "timeout": 30,
+      "retry_attempts": 3,
+      "retry_delay": 5,
+      "verify_ssl": true,
+      "log_level": "info",
+      "log_file": "~/.trend_micro_api_prod.jsonl",
+      "rate_limit_enabled": true
+    },
+    "production_au": {
+      "name": "Production - Adobe MS Australia",
+      "environment_label": "Production (Australia)",
+      "region": "au",
+      "region_name": "Australia",
+      "api_base_url": "https://api.au.xdr.trendmicro.com",
+      "portal_url": "https://portal.au.xdr.trendmicro.com/",
+      "business_id": "cc305c0c-a560-4fa9-9481-46a77278122e",
+      "business_name": "Adobe-MS-Au",
+      "timeout": 30,
+      "retry_attempts": 3,
+      "retry_delay": 5,
+      "verify_ssl": true,
+      "log_level": "info",
+      "log_file": "~/.trend_micro_api_prod_au.jsonl",
+      "rate_limit_enabled": true
+    },
+    "quality_test": {
+      "name": "Quality & Test - Adobe Managed Services QTE",
+      "environment_label": "Quality & Test",
+      "region": "au",
+      "region_name": "Australia",
+      "api_base_url": "https://api.au.xdr.trendmicro.com",
+      "portal_url": "https://portal.au.xdr.trendmicro.com/",
+      "business_id": "c732de94-ce77-4540-89d4-7f5c2c2032f6",
+      "business_name": "Adobe Managed Services QTE",
+      "timeout": 30,
+      "retry_attempts": 3,
+      "retry_delay": 5,
+      "verify_ssl": true,
+      "log_level": "info",
+      "log_file": "~/.trend_micro_api_quality_test.jsonl",
+      "rate_limit_enabled": true
+    }
+  },
+  "region_endpoints": {
+    "au": {
+      "name": "Australia",
+      "api_base_url": "https://api.au.xdr.trendmicro.com",
+      "portal_url": "https://portal.au.xdr.trendmicro.com/",
+      "status": "active"
+    },
+    "us": {
+      "name": "United States (Global)",
+      "api_base_url": "https://api.xdr.trendmicro.com",
+      "portal_url": "https://portal.xdr.trendmicro.com/",
+      "status": "active"
+    },
+    "eu": {
+      "name": "Europe",
+      "api_base_url": "https://api.eu.xdr.trendmicro.com",
+      "portal_url": "https://portal.eu.xdr.trendmicro.com/",
+      "status": "available"
+    },
+    "sg": {
+      "name": "Singapore",
+      "api_base_url": "https://api.sg.xdr.trendmicro.com",
+      "portal_url": "https://portal.sg.xdr.trendmicro.com/",
+      "status": "available"
+    },
+    "in": {
+      "name": "India",
+      "api_base_url": "https://api.in.xdr.trendmicro.com",
+      "portal_url": "https://portal.in.xdr.trendmicro.com/",
+      "status": "available"
+    },
+    "jp": {
+      "name": "Japan",
+      "api_base_url": "https://api.jp.xdr.trendmicro.com",
+      "portal_url": "https://portal.jp.xdr.trendmicro.com/",
+      "status": "available"
+    }
+  }
+}

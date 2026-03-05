@@ -1,0 +1,395 @@
+{
+  "__comment": "Author: Mukesh Kesharwani (mkesharw@adobe.com)",
+  "dashboard": {
+    "title": "Trend Micro Container Security - Vulnerability Trends",
+    "tags": ["trend-micro", "container-security", "vulnerabilities", "otel"],
+    "timezone": "utc",
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": null,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "type": "timeseries",
+        "title": "Total Vulnerabilities by Group",
+        "description": "Total vulnerability count over time for each group",
+        "targets": [
+          {
+            "expr": "{job=\"trend-micro-container-security\"} | json | line_format \"{{.Attributes.vulnerability.total}}\"",
+            "legendFormat": "{{group_name}}",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "fillOpacity": 10,
+              "showPoints": "auto",
+              "pointSize": 5
+            },
+            "color": {"mode": "palette-classic"},
+            "unit": "short"
+          }
+        },
+        "options": {
+          "legend": {"displayMode": "list", "placement": "bottom"},
+          "tooltip": {"mode": "multi", "sort": "desc"}
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "type": "timeseries",
+        "title": "Critical & High Severity Vulnerabilities",
+        "description": "Critical and High severity vulnerabilities requiring immediate attention",
+        "targets": [
+          {
+            "expr": "{job=\"trend-micro-container-security\"} | json | line_format \"{{.Attributes.vulnerability.severity.critical}}\"",
+            "legendFormat": "{{group_name}} - Critical",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          },
+          {
+            "expr": "{job=\"trend-micro-container-security\"} | json | line_format \"{{.Attributes.vulnerability.severity.high}}\"",
+            "legendFormat": "{{group_name}} - High",
+            "refId": "B",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "fillOpacity": 20
+            },
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 5, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 8},
+        "type": "stat",
+        "title": "Current Total Vulnerabilities",
+        "description": "Latest total vulnerability count across all groups",
+        "targets": [
+          {
+            "expr": "sum(last_over_time({job=\"trend-micro-container-security\"} | json | unwrap Attributes.vulnerability.total [1h]))",
+            "legendFormat": "Total",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 100, "color": "yellow"},
+                {"value": 500, "color": "orange"},
+                {"value": 1000, "color": "red"}
+              ]
+            },
+            "color": {"mode": "thresholds"},
+            "unit": "short"
+          }
+        },
+        "options": {
+          "reduceOptions": {"values": false, "calcs": ["lastNotNull"]},
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "background",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 8},
+        "type": "stat",
+        "title": "Critical Vulnerabilities",
+        "description": "Latest critical vulnerability count",
+        "targets": [
+          {
+            "expr": "sum(last_over_time({job=\"trend-micro-container-security\"} | json | unwrap Attributes.vulnerability.severity.critical [1h]))",
+            "legendFormat": "Critical",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 1, "color": "orange"},
+                {"value": 5, "color": "red"}
+              ]
+            },
+            "color": {"mode": "thresholds"}
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 8},
+        "type": "stat",
+        "title": "Risk Score",
+        "description": "Weighted risk score (Critical×10 + High×5 + Medium×2 + Low×1)",
+        "targets": [
+          {
+            "expr": "sum(last_over_time({job=\"trend-micro-container-security\"} | json | unwrap Attributes.vulnerability.risk_score [1h]))",
+            "legendFormat": "Risk Score",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 100, "color": "yellow"},
+                {"value": 500, "color": "orange"},
+                {"value": 1000, "color": "red"}
+              ]
+            },
+            "color": {"mode": "thresholds"}
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+        "type": "barchart",
+        "title": "Vulnerability Distribution by Severity",
+        "description": "Current vulnerability counts by severity level",
+        "targets": [
+          {
+            "expr": "{job=\"trend-micro-container-security\"} | json | line_format \"{{.Attributes.vulnerability.severity.critical}}\"",
+            "legendFormat": "Critical",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          },
+          {
+            "expr": "{job=\"trend-micro-container-security\"} | json | line_format \"{{.Attributes.vulnerability.severity.high}}\"",
+            "legendFormat": "High",
+            "refId": "B",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          },
+          {
+            "expr": "{job=\"trend-micro-container-security\"} | json | line_format \"{{.Attributes.vulnerability.severity.medium}}\"",
+            "legendFormat": "Medium",
+            "refId": "C",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          },
+          {
+            "expr": "{job=\"trend-micro-container-security\"} | json | line_format \"{{.Attributes.vulnerability.severity.low}}\"",
+            "legendFormat": "Low",
+            "refId": "D",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"}
+          },
+          "overrides": [
+            {"matcher": {"id": "byName", "options": "Critical"}, "properties": [{"id": "color", "value": {"fixedColor": "dark-red", "mode": "fixed"}}]},
+            {"matcher": {"id": "byName", "options": "High"}, "properties": [{"id": "color", "value": {"fixedColor": "dark-orange", "mode": "fixed"}}]},
+            {"matcher": {"id": "byName", "options": "Medium"}, "properties": [{"id": "color", "value": {"fixedColor": "dark-yellow", "mode": "fixed"}}]},
+            {"matcher": {"id": "byName", "options": "Low"}, "properties": [{"id": "color", "value": {"fixedColor": "dark-blue", "mode": "fixed"}}]}
+          ]
+        },
+        "options": {
+          "orientation": "horizontal",
+          "xTickLabelRotation": 0,
+          "legend": {"displayMode": "list", "placement": "bottom"}
+        }
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+        "type": "table",
+        "title": "Group Summary",
+        "description": "Latest vulnerability counts per group",
+        "targets": [
+          {
+            "expr": "{job=\"trend-micro-container-security\"} | json",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "group_name": "Group",
+                "Attributes.vulnerability.total": "Total",
+                "Attributes.vulnerability.severity.critical": "Critical",
+                "Attributes.vulnerability.severity.high": "High",
+                "Attributes.vulnerability.severity.medium": "Medium",
+                "Attributes.vulnerability.severity.low": "Low",
+                "Attributes.vulnerability.risk_score": "Risk Score"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Critical"},
+              "properties": [
+                {"id": "custom.displayMode", "value": "color-background"},
+                {"id": "thresholds", "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "green"},
+                    {"value": 1, "color": "red"}
+                  ]
+                }}
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "footer": {"show": false}
+        }
+      },
+      {
+        "id": 8,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 22},
+        "type": "timeseries",
+        "title": "Risk Score Trend by Group",
+        "description": "Weighted risk score trend showing overall security posture",
+        "targets": [
+          {
+            "expr": "{job=\"trend-micro-container-security\"} | json | line_format \"{{.Attributes.vulnerability.risk_score}}\"",
+            "legendFormat": "{{group_name}}",
+            "refId": "A",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "lineWidth": 2,
+              "fillOpacity": 15,
+              "gradientMode": "hue",
+              "showPoints": "auto"
+            },
+            "color": {"mode": "palette-classic"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 100, "color": "yellow"},
+                {"value": 500, "color": "orange"},
+                {"value": 1000, "color": "red"}
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": {"displayMode": "table", "placement": "right", "calcs": ["last", "mean", "max"]},
+          "tooltip": {"mode": "multi", "sort": "desc"}
+        }
+      }
+    ],
+    "refresh": "5m",
+    "schemaVersion": 38,
+    "style": "dark",
+    "templating": {
+      "list": [
+        {
+          "name": "DS_LOKI",
+          "label": "Loki",
+          "type": "datasource",
+          "query": "loki"
+        },
+        {
+          "name": "group",
+          "label": "Group",
+          "type": "query",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "query": "label_values(group_name)",
+          "multi": true,
+          "includeAll": true,
+          "allValue": ".*"
+        },
+        {
+          "name": "region",
+          "label": "Region",
+          "type": "query",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "query": "label_values(cloud_region)",
+          "multi": false,
+          "includeAll": true
+        }
+      ]
+    },
+    "time": {
+      "from": "now-7d",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5m", "15m", "30m", "1h", "2h", "1d"]
+    },
+    "version": 1,
+    "weekStart": ""
+  },
+  "overwrite": false,
+  "message": "Trend Micro Container Security Vulnerability Dashboard",
+  "folderUid": "",
+  "inputs": [
+    {
+      "name": "DS_LOKI",
+      "label": "Loki",
+      "description": "Loki data source",
+      "type": "datasource",
+      "pluginId": "loki"
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+---
+description: Always use jump host (nas.keekar.com) for pfSense firewall operations
+alwaysApply: true
+---
+
+# Jump Host Pattern for Firewall Management
+
+## ⚠️ CRITICAL: Always Use Jump Host
+
+When executing ANY commands related to the pfSense firewall (192.168.1.1 / fw.keekar.com), you **MUST** use the jump host at nas.keekar.com (TrueNAS) as an intermediary.
+
+### Why?
+- Corporate MacBook triggers CrowdStrike security alerts when directly connecting
+- Jump host provides logging and audit trail
+- Avoids security team escalations
+
+---
+
+## Command Patterns
+
+### ❌ NEVER DO THIS:
+```bash
+# Direct connection - WRONG!
+ssh admin@192.168.1.1 "command"
+ssh admin@fw.keekar.com "command"
+```
+
+### ✅ ALWAYS DO THIS:
+
+#### Two-hop SSH (Most reliable)
+```bash
+# Connect via jump host
+ssh nas.keekar.com "ssh admin@192.168.1.1 'command here'"
+
+# Using fw helper (preferred - includes logging)
+ssh nas.keekar.com "fw exec 'command here'"
+```
+
+#### Interactive Session
+```bash
+# Step 1: SSH to jump host
+ssh nas.keekar.com
+
+# Step 2: Use helper script
+fw exec 'command here'
+# OR
+ssh admin@192.168.1.1 "command here"
+```
+
+---
+
+## Common Operations
+
+### Execute commands:
+```bash
+ssh nas.keekar.com "fw exec 'pfctl -sr'"
+ssh nas.keekar.com "fw exec 'ls -la /usr/local/etc/rc.d/'"
+```
+
+### Copy files (three-step process):
+```bash
+# Step 1: MacBook → Jump Host
+scp file.txt nas.keekar.com:~/
+
+# Step 2: Jump Host → Firewall
+ssh nas.keekar.com "scp ~/file.txt admin@192.168.1.1:/tmp/"
+
+# Step 3: Move on firewall
+ssh nas.keekar.com "fw exec 'sudo mv /tmp/file.txt /final/location/'"
+```
+
+---
+
+## Helper Commands (on nas.keekar.com)
+
+- `fw ssh` - Interactive shell (logged)
+- `fw exec 'cmd'` - Execute command (logged)
+- `fw logs` - View recent logs
+- `fw tail` - Follow logs real-time
+
+---
+
+## Quick Reference
+
+| Task | Command Pattern |
+|------|----------------|
+| Execute command | `ssh nas.keekar.com "fw exec 'cmd'"` |
+| Interactive | `ssh nas.keekar.com` then `fw ssh` |
+| Copy file | `scp file nas.keekar.com:~/ && ssh nas.keekar.com "scp ~/file admin@192.168.1.1:/tmp/"` |
+| View logs | `ssh nas.keekar.com "fw logs"` |
+
+---
+
+## Verification Checklist
+
+Before executing any firewall command:
+
+1. ✅ Using nas.keekar.com as jump host?
+2. ✅ Command being logged?
+3. ✅ NOT connecting directly from MacBook?
+
+---
+
+## Golden Rules
+
+🎯 Every firewall operation goes through nas.keekar.com  
+🎯 Always log using `fw exec` when possible  
+🎯 Never direct MacBook → Firewall connections

@@ -1,0 +1,158 @@
+# Promtail Configuration for Trend Micro Container Security OTel Logs
+# 
+# This configuration ships OTel vulnerability metrics to Grafana Loki
+# for time-series visualization and alerting.
+#
+# Author: Mukesh Kesharwani (mkesharw@adobe.com)
+#
+# Usage:
+#   promtail -config.file=config/promtail-config.yaml
+#
+# Requirements:
+#   - Loki running on localhost:3100 (or update clients.url)
+#   - container_vulnerability_metrics.jsonl being generated regularly
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+# Position tracking (so Promtail knows where it left off)
+positions:
+  filename: /tmp/promtail-positions.yaml
+
+# Loki server(s) to send logs to
+clients:
+  - url: http://localhost:3100/loki/api/v1/push
+    # For production, consider:
+    # - url: https://loki.example.com/loki/api/v1/push
+    #   basic_auth:
+    #     username: user
+    #     password: pass
+    
+    # Batching configuration
+    batchwait: 1s
+    batchsize: 1048576  # 1MB
+    
+    # Retry configuration
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+
+# Log scraping configuration
+scrape_configs:
+  - job_name: trend-micro-container-security
+    
+    static_configs:
+      - targets:
+          - localhost
+        
+        labels:
+          job: trend-micro-container-security
+          source: otel-jsonl
+          environment: production
+          __path__: /Users/mkesharw/Documents/Integration-API-Dev/container_vulnerability_metrics.jsonl
+    
+    # Pipeline for parsing JSON and extracting fields
+    pipeline_stages:
+      # Parse JSON from each line
+      - json:
+          expressions:
+            # Timestamp fields
+            timestamp: Timestamp
+            observed_timestamp: ObservedTimestamp
+            
+            # Severity
+            severity_num: SeverityNumber
+            severity_text: SeverityText
+            
+            # Body
+            body: Body
+            
+            # Resource attributes
+            service_name: Resource.service.name
+            service_version: Resource.service.version
+            cloud_provider: Resource.cloud.provider
+            cloud_region: Resource.cloud.region
+            cloud_account_id: Resource.cloud.account.id
+            cloud_account_name: Resource.cloud.account.name
+            
+            # Vulnerability attributes (main metrics)
+            group_id: Attributes.group.id
+            group_name: Attributes.group.name
+            clusters_count: Attributes.clusters.count
+            vuln_total: Attributes.vulnerability.total
+            vuln_unique_cves: Attributes.vulnerability.unique_cves
+            vuln_critical: Attributes.vulnerability.severity.critical
+            vuln_high: Attributes.vulnerability.severity.high
+            vuln_medium: Attributes.vulnerability.severity.medium
+            vuln_low: Attributes.vulnerability.severity.low
+            vuln_unknown: Attributes.vulnerability.severity.unknown
+            risk_score: Attributes.vulnerability.risk_score
+            
+            # Event attributes
+            event_kind: Attributes.event.kind
+            event_category: Attributes.event.category
+      
+      # Extract labels (for filtering/grouping in Grafana)
+      - labels:
+          group_name:
+          group_id:
+          cloud_region:
+          cloud_account_name:
+          service_name:
+          event_category:
+      
+      # Convert metrics to labels for easier querying
+      - static_labels:
+          type: vulnerability_scan
+      
+      # Use the timestamp from the log entry
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+          
+          # Fallback if timestamp parsing fails
+          fallback_formats:
+            - RFC3339
+      
+      # Add metrics as structured metadata
+      - metrics:
+          vulnerability_total:
+            type: Gauge
+            description: Total vulnerability count
+            source: vuln_total
+            config:
+              action: set
+          
+          vulnerability_critical:
+            type: Gauge
+            description: Critical vulnerability count
+            source: vuln_critical
+            config:
+              action: set
+          
+          vulnerability_high:
+            type: Gauge
+            description: High vulnerability count
+            source: vuln_high
+            config:
+              action: set
+          
+          vulnerability_risk_score:
+            type: Gauge
+            description: Weighted risk score
+            source: risk_score
+            config:
+              action: set
+
+# Limits configuration
+limits_config:
+  readline_rate_enabled: true
+  readline_rate: 10000      # Max lines per second
+  readline_burst: 20000     # Burst allowance
+
+# Target configuration
+target_config:
+  sync_period: 10s           # How often to sync file positions

@@ -1,0 +1,49 @@
+# Environment variables
+.env
+
+# Token files
+*.token
+*token*.json
+bootstrap_token.*
+
+# Old credentials file (renamed to deployment_config.json)
+# Note: deployment_config.json can now be committed as it contains no secrets
+# config/deployment_config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+/tmp/
+*.tmp
+
+# Exported pass store for Docker (contains secrets; use export-pass-for-docker.sh to create)
+/pass-export/
+# Default empty store (contains GPG key; run export-pass-for-docker.sh --empty to create before first build)
+/pass-export-default/
+
+

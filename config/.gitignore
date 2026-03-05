@@ -1,0 +1,18 @@
+# Ignore credential files
+credentials.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Ignore local overrides
+local_*.json
+*.local.json
+
+# Ignore backup files
+*.bak
+*.backup
+*~
+
+# Ignore logs
+*.log
