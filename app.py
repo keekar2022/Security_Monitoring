@@ -8,6 +8,9 @@ Run locally:
   pip install -r requirements.txt
   cp .env.example .env
   streamlit run app.py
+
+Deploy (Streamlit Community Cloud): push branch main or Development to
+  https://github.com/keekar2022/Security_Monitoring — main file app.py
 """
 
 from __future__ import annotations

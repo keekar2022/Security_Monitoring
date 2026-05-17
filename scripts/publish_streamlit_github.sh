@@ -59,13 +59,29 @@ EOF
 )"
 fi
 
+REPO_SLUG="$(echo "$URL" | sed -E 's#.*github.com[:/](.+)(\.git)?#\1#')"
+
 echo "Pushing $BRANCH to $REMOTE..."
 git push "$REMOTE" "$BRANCH"
+
+# Streamlit / dual-repo workflows often use Development; keep it in sync with main.
+if [[ "$BRANCH" == "main" ]]; then
+  echo "Updating remote Development branch (same commit as main)..."
+  git push "$REMOTE" "HEAD:Development"
+fi
+
+if command -v gh >/dev/null 2>&1; then
+  if gh api "repos/$REPO_SLUG/contents/app.py?ref=$BRANCH" --jq .sha >/dev/null 2>&1; then
+    echo "Verified: app.py is on GitHub ($REPO_SLUG, branch $BRANCH)."
+  else
+    die "app.py not found on GitHub after push. Check repo access and branch name."
+  fi
+fi
 
 echo ""
 echo "Done. Next:"
 echo "  1. Open https://share.streamlit.io/ → Create app"
-echo "  2. Repo: $(echo "$URL" | sed -E 's#.*github.com[:/](.+)(\.git)?#\1#')"
-echo "  3. Branch: $BRANCH   Main file: app.py"
+echo "  2. Repo: $REPO_SLUG"
+echo "  3. Branch: main or Development   Main file: app.py"
 echo "  4. Or run: streamlit deploy   (from this directory, after GitHub login)"
 echo "  5. Set Secrets from .streamlit/secrets.toml.example"
