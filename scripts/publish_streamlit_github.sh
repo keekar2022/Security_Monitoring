@@ -59,7 +59,11 @@ EOF
 )"
 fi
 
-REPO_SLUG="$(echo "$URL" | sed -E 's#.*github.com[:/](.+)(\.git)?#\1#')"
+# Portable slug (BSD sed leaves ".git" on the capture — breaks gh api verification).
+_repo_path="${URL%.git}"
+_repo_path="${_repo_path#*github.com/}"
+_repo_path="${_repo_path#*:}"
+REPO_SLUG="${_repo_path%/}"
 
 echo "Pushing $BRANCH to $REMOTE..."
 git push "$REMOTE" "$BRANCH"
@@ -71,10 +75,11 @@ if [[ "$BRANCH" == "main" ]]; then
 fi
 
 if command -v gh >/dev/null 2>&1; then
-  if gh api "repos/$REPO_SLUG/contents/app.py?ref=$BRANCH" --jq .sha >/dev/null 2>&1; then
-    echo "Verified: app.py is on GitHub ($REPO_SLUG, branch $BRANCH)."
+  _sha="$(gh api "repos/${REPO_SLUG}/contents/app.py?ref=${BRANCH}" --jq .sha 2>/dev/null || true)"
+  if [[ -n "$_sha" ]]; then
+    echo "Verified: app.py is on GitHub (${REPO_SLUG}, branch ${BRANCH}, sha ${_sha:0:7})."
   else
-    die "app.py not found on GitHub after push. Check repo access and branch name."
+    die "app.py not found on GitHub (${REPO_SLUG}, branch ${BRANCH}). Check repo access and branch name."
   fi
 fi
 
