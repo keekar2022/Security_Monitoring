@@ -23,20 +23,15 @@ from monitoring_dashboard.metrics import (
     hero_stats,
     row_metric,
 )
-
-PLOTLY_LAYOUT = dict(
-    template="plotly_white",
-    margin=dict(l=50, r=24, t=48, b=60),
-    paper_bgcolor="#fff",
-    plot_bgcolor="#fafafa",
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
-)
+from monitoring_dashboard.app_meta import APP_TITLE
+from monitoring_dashboard.ui_server_vuln_legacy import render_server_vuln_legacy_tab
+from monitoring_dashboard.ui_theme import PLOTLY_LAYOUT
 
 TAB_ORDER = ["container", "endpointVuln", "endpoint"]
 
 
 def render_dashboard() -> None:
-    st.markdown("## Vulnerabilities & Inventory Dashboard")
+    st.title(APP_TITLE)
     last = get_last_run()
     meta = load_meta()
     if last:
@@ -53,11 +48,14 @@ def render_dashboard() -> None:
             "Container Vulnerabilities",
             "Endpoint Vulnerabilities",
             "Endpoint Inventory",
+            "ServerVulnerabilities-LegacyTool",
         ]
     )
     for tab, data_type in zip(tabs, TAB_ORDER):
         with tab:
             _render_dataset_tab(data_type)
+    with tabs[3]:
+        render_server_vuln_legacy_tab()
 
 
 def _render_dataset_tab(data_type: str) -> None:

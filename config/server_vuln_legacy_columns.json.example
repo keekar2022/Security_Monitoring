@@ -1,0 +1,10 @@
+{
+  "system_name": ["System", "Hostname", "server_name", "Host"],
+  "year": ["Year", "year", "YEAR"],
+  "scan_date": ["Scan Date", "Date", "scan_date", "Report Date"],
+  "critical": ["Critical", "critical"],
+  "high": ["High", "high"],
+  "medium": ["Medium", "medium"],
+  "low": ["Low", "low"],
+  "total": ["Total", "Vulnerabilities", "total", "Count"]
+}

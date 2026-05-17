@@ -7,6 +7,14 @@ from __future__ import annotations
 
 import streamlit as st
 
+PLOTLY_LAYOUT = dict(
+    template="plotly_white",
+    margin=dict(l=50, r=24, t=48, b=60),
+    paper_bgcolor="#fff",
+    plot_bgcolor="#fafafa",
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+)
+
 _SCSS = """
 <style>
 div[data-testid="stMetricValue"] { font-variant-numeric: tabular-nums; }

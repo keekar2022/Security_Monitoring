@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "record_type": "weekly_snapshot",
+  "mock": false,
+  "seeded": false,
+  "last_data_date": "2027-01-01",
+  "first_data_date": "2022-03-17",
+  "record_count": 251,
+  "last_upload_at": "2026-05-17T22:27:50Z",
+  "import_upload_id": "import-aem-2022-2026",
+  "source_files": [
+    "2022-AEMGovAu-Vulnerability-Scanning-Report.csv",
+    "2023-AEMGovAu-Vulnerability-Scanning-Report.csv",
+    "2024-AEMGovAu-Vulnerability-Scanning-Report.csv",
+    "2025-AEMGovAu-Vulnerability-Scanning-Report.csv",
+    "2026-AEMGovAu-Vulnerability-Scanning-Report.csv"
+  ],
+  "rows_with_container_metrics": 82
+}

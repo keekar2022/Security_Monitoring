@@ -1,0 +1,19 @@
+{
+  "uploads": [
+    {
+      "file_sha256": "import-aem-2022-2026",
+      "original_filename": "bulk-import-2022-2026",
+      "processed_at": "2026-05-17T22:27:50Z",
+      "report_source": "aem_weekly",
+      "rows_added": 251,
+      "scan_date_max": "2027-01-01",
+      "source_files": [
+        "2022-AEMGovAu-Vulnerability-Scanning-Report.csv",
+        "2023-AEMGovAu-Vulnerability-Scanning-Report.csv",
+        "2024-AEMGovAu-Vulnerability-Scanning-Report.csv",
+        "2025-AEMGovAu-Vulnerability-Scanning-Report.csv",
+        "2026-AEMGovAu-Vulnerability-Scanning-Report.csv"
+      ]
+    }
+  ]
+}
