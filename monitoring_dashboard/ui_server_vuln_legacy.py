@@ -24,7 +24,9 @@ from monitoring_dashboard.server_vuln_legacy.aem_report_parser import (
     is_aem_report_bytes,
     parse_aem_report_bytes,
 )
+from monitoring_dashboard.server_vuln_legacy.splunk_report_parser import is_splunk_nexpose_bytes
 from monitoring_dashboard.server_vuln_legacy.metrics import (
+    ENV_COLORS,
     LEGACY_METRICS,
     SOURCE_LABELS,
     TAB_META,
@@ -33,8 +35,13 @@ from monitoring_dashboard.server_vuln_legacy.metrics import (
     hero_stats,
     is_weekly_dataframe,
     latest_year_df,
+    MONTH_ORDER_LABELS,
+    YEAR_LINE_COLORS,
+    monthly_per_server_all_years,
+    recent_weeks_df,
     sum_severity,
     weekly_display_columns,
+    yearly_environment_totals,
 )
 from monitoring_dashboard.server_vuln_legacy.parser import parse_csv_bytes
 from monitoring_dashboard.ui_theme import PLOTLY_LAYOUT
@@ -66,6 +73,7 @@ def render_server_vuln_legacy_tab() -> None:
         if st.button("Reload data", key="reload_server_vuln_legacy"):
             st.session_state[cache_key] = load_dataframe()
             st.session_state["loaded_at_server_vuln_legacy"] = datetime.now()
+            _reset_legacy_year_filter(st.session_state[cache_key])
             st.rerun()
     with col_s:
         loaded = st.session_state.get("loaded_at_server_vuln_legacy")
@@ -81,8 +89,13 @@ def render_server_vuln_legacy_tab() -> None:
         placeholder = "Search dates, metrics…" if weekly else "Search systems…"
         search = st.text_input("Filter", key="search_legacy", placeholder=placeholder)
     with c_f2:
-        years = sorted(df["year"].dropna().unique().tolist()) if not df.empty and "year" in df.columns else []
-        year_filter = st.multiselect("Years", years, default=years, key="years_legacy")
+        years = (
+            sorted(int(y) for y in df["year"].dropna().unique())
+            if not df.empty and "year" in df.columns
+            else []
+        )
+        _sync_legacy_year_filter(years)
+        year_filter = st.multiselect("Years", years, key="years_legacy")
 
     if search:
         df = filter_dataframe(df, search)
@@ -104,6 +117,14 @@ def render_server_vuln_legacy_tab() -> None:
 
     stats = hero_stats(df)
     _render_hero(meta, stats, weekly=weekly)
+
+    store_meta = load_store_meta()
+    cutoff = store_meta.get("predicted_data_cutoff")
+    if weekly and cutoff:
+        st.caption(
+            f"Bulk AEM import excludes projected rows from **{cutoff}** onward; "
+            f"manual uploads accept all scan weeks."
+        )
 
     st.caption(f"Showing {len(df)} record(s)")
     view_mode = st.radio(
@@ -127,14 +148,7 @@ def render_server_vuln_legacy_tab() -> None:
         if view_mode == "Table":
             st.info("Select Chart or Both to view trends.")
         elif weekly:
-            metric_keys = [k for k, _ in WEEKLY_METRICS]
-            metric = st.selectbox(
-                "Metric",
-                metric_keys,
-                format_func=lambda k: dict(WEEKLY_METRICS).get(k, k),
-                key="metric_legacy_weekly",
-            )
-            _chart_weekly_metric(df, metric)
+            _render_weekly_trends(df, view_mode)
         else:
             metric = st.selectbox(
                 "Metric",
@@ -169,17 +183,55 @@ def render_server_vuln_legacy_tab() -> None:
         _render_upload_section(expanded=stale, weekly=weekly)
 
 
+def _sync_legacy_year_filter(available_years: list[int]) -> None:
+    """Ensure newly imported years (e.g. 2026) appear in the year filter after uploads."""
+    if not available_years:
+        return
+    max_year = max(available_years)
+    available_set = set(available_years)
+    if "years_legacy" not in st.session_state:
+        st.session_state.years_legacy = available_years
+    else:
+        selected = set(st.session_state.get("years_legacy") or []) & available_set
+        if max_year not in selected:
+            selected.add(max_year)
+        st.session_state.years_legacy = sorted(selected)
+    st.session_state.legacy_years_sync_max = max_year
+
+
+def _reset_legacy_year_filter(df: pd.DataFrame) -> None:
+    if df.empty or "year" not in df.columns:
+        return
+    years = sorted(int(y) for y in df["year"].dropna().unique())
+    st.session_state.years_legacy = years
+    st.session_state.legacy_years_sync_max = max(years) if years else None
+
+
 def _render_upload_section(*, expanded: bool, weekly: bool) -> None:
     label = "Upload latest AEM scan report (CSV)" if expanded else "Upload new AEM scan report (CSV)"
     with st.expander(label, expanded=expanded):
         st.caption(
-            "Upload **AEM Gov AU Vulnerability Scanning Report** CSV files "
-            "(weekly M2-Prod / Cust SA / container metrics)."
+            "Upload **AEM Gov AU Vulnerability Scanning Report** CSV (weekly aggregates) "
+            "or **Splunk Nexpose** exports (`AMSGovCloud_M2-Prod-*.csv`, `AMSGovCloud_Cust_SA_Acct-*.csv`)."
         )
         st.caption(
-            "Container vul count maps to **EKS_AEMGovAU_PROD_Cluster** in Container Vulnerabilities."
+            "Splunk files update M2/SA server and TTV counts for that scan week; "
+            "container metrics stay from the AEM report unless you upload one."
         )
-        uploaded = st.file_uploader("CSV file", type=["csv"], key="legacy_csv_upload")
+        st.caption(
+            "**Week dates:** Thursday Splunk exports (e.g. 7 May, 14 May) map to the **following Friday** "
+            "on the chart (8 May, 15 May). After upload, click **Reload data** if charts do not refresh."
+        )
+        uploaded_files = st.file_uploader(
+            "Drag and drop CSV files here, or click to browse",
+            type=["csv"],
+            accept_multiple_files=True,
+            key="legacy_csv_upload",
+            help="Select one or more AEM or Splunk Nexpose CSV exports. Files are processed in order.",
+        )
+        files = list(uploaded_files or [])
+        if files:
+            st.caption(f"**{len(files)}** file(s) ready: {', '.join(f.name for f in files)}")
         if not weekly:
             st.radio(
                 "Report source (per-system Splunk CSV only)",
@@ -189,29 +241,42 @@ def _render_upload_section(*, expanded: bool, weekly: bool) -> None:
                 key="legacy_report_source",
             )
         if st.button("Process upload", type="primary", key="legacy_process_upload"):
-            if uploaded is None:
-                st.error("Select a CSV file first.")
+            if not files:
+                st.error("Drag and drop or select one or more CSV files first.")
                 return
-            raw = uploaded.getvalue()
-            if is_aem_report_bytes(raw) or weekly:
-                rows, errors = parse_aem_report_bytes(raw, source_file=uploaded.name)
-                report_source = "aem_weekly"
-            else:
-                report_source = st.session_state.get("legacy_report_source", "m2_prod")
-                rows, errors = parse_csv_bytes(raw)
-            if errors:
-                for err in errors[:10]:
-                    st.error(err)
-                if len(errors) > 10:
-                    st.caption(f"… and {len(errors) - 10} more errors")
-                return
-            ok, msg = ingest_upload(raw, uploaded.name, report_source, rows)
-            if ok:
-                st.success(msg)
+            succeeded = 0
+            skipped = 0
+            failed = 0
+            for uploaded in files:
+                with st.spinner(f"Processing {uploaded.name}…"):
+                    ok, msg, parse_errors = _process_legacy_upload_file(uploaded, weekly=weekly)
+                if parse_errors:
+                    failed += 1
+                    st.error(f"**{uploaded.name}** — parse failed")
+                    for err in parse_errors[:10]:
+                        st.error(err)
+                    if len(parse_errors) > 10:
+                        st.caption(f"… and {len(parse_errors) - 10} more errors for {uploaded.name}")
+                    continue
+                if ok:
+                    succeeded += 1
+                    st.success(f"**{uploaded.name}** — {msg}")
+                else:
+                    skipped += 1
+                    st.warning(f"**{uploaded.name}** — {msg}")
+            if succeeded:
                 st.session_state.pop("df_server_vuln_legacy", None)
+                summary = f"Processed {succeeded} of {len(files)} file(s)."
+                if skipped:
+                    summary += f" {skipped} skipped (duplicate or no change)."
+                if failed:
+                    summary += f" {failed} failed."
+                st.info(summary)
                 st.rerun()
-            else:
-                st.warning(msg)
+            elif skipped and not failed:
+                st.info(f"No new data from {len(files)} file(s) (duplicates or already ingested).")
+            elif failed:
+                st.error(f"All {len(files)} file(s) failed to process.")
 
         st.markdown("**Processed files**")
         ledger = load_ledger().get("uploads", [])
@@ -227,6 +292,32 @@ def _render_upload_section(*, expanded: bool, weekly: bool) -> None:
                 f"schema v{store_meta.get('schema_version', 1)} · "
                 f"last data date: {store_meta.get('last_data_date', '—')}"
             )
+
+
+def _process_legacy_upload_file(
+    uploaded,
+    *,
+    weekly: bool,
+) -> tuple[bool, str, list[str]]:
+    """Parse and ingest one uploaded CSV. Returns (success, message, parse_errors)."""
+    raw = uploaded.getvalue()
+    if is_aem_report_bytes(raw) or (weekly and not is_splunk_nexpose_bytes(raw)):
+        rows, errors = parse_aem_report_bytes(
+            raw,
+            source_file=uploaded.name,
+            apply_predicted_filter=False,
+        )
+        report_source = "aem_weekly"
+    elif is_splunk_nexpose_bytes(raw):
+        rows, errors = [], []
+        report_source = "splunk"
+    else:
+        report_source = st.session_state.get("legacy_report_source", "m2_prod")
+        rows, errors = parse_csv_bytes(raw)
+    if errors:
+        return False, "", errors
+    ok, msg = ingest_upload(raw, uploaded.name, report_source, rows)
+    return ok, msg, []
 
 
 def _render_hero(meta: dict, stats: dict, *, weekly: bool) -> None:
@@ -274,10 +365,19 @@ def _fmt_num(val) -> str:
 
 def _render_weekly_overview(df: pd.DataFrame, view_mode: str) -> None:
     if view_mode in ("Chart", "Both"):
-        _chart_weekly_ttv_trend(df)
-        if "container_vul_count" in df.columns and df["container_vul_count"].notna().any():
-            _chart_weekly_metric(df, "container_vul_count")
-        _chart_weekly_servers(df)
+        recent = recent_weeks_df(df, weeks=20)
+        if not recent.empty:
+            _chart_weekly_ttv_trend(
+                recent,
+                title="M2 vs SA total vulnerabilities (last 20 weeks)",
+                show_rangeslider=False,
+            )
+        _chart_weekly_ttv_trend(
+            df,
+            title="M2 vs SA total vulnerabilities (full history)",
+            show_rangeslider=True,
+        )
+        _chart_yearly_environment_totals(df)
     if view_mode in ("Table", "Both") and not df.empty:
         st.markdown("**Latest year summary (avg TTV)**")
         sub = latest_year_df(df)
@@ -307,7 +407,12 @@ def _render_legacy_overview(df: pd.DataFrame, view_mode: str) -> None:
         st.dataframe(_severity_table(df), use_container_width=True)
 
 
-def _chart_weekly_ttv_trend(df: pd.DataFrame) -> None:
+def _chart_weekly_ttv_trend(
+    df: pd.DataFrame,
+    *,
+    title: str = "M2 vs SA total vulnerabilities (weekly)",
+    show_rangeslider: bool = False,
+) -> None:
     if df.empty or "scan_date" not in df.columns:
         st.caption("No data.")
         return
@@ -321,6 +426,7 @@ def _chart_weekly_ttv_trend(df: pd.DataFrame) -> None:
                 mode="lines+markers",
                 name="M2 TTV",
                 line=dict(color="#059669", width=2),
+                hovertemplate="%{x|%d %b %Y}<br>M2 TTV=%{y}<extra></extra>",
             )
         )
     if "sa_ttv" in sub.columns:
@@ -331,15 +437,149 @@ def _chart_weekly_ttv_trend(df: pd.DataFrame) -> None:
                 mode="lines+markers",
                 name="SA TTV",
                 line=dict(color="#2563eb", width=2),
+                hovertemplate="%{x|%d %b %Y}<br>SA TTV=%{y}<extra></extra>",
             )
         )
     fig.update_layout(
-        title="M2 vs SA total vulnerabilities (weekly)",
+        title=title,
         height=380,
-        xaxis_title="Week",
+        xaxis_title="Scan week (Friday)",
         yaxis_title="TTV",
         **PLOTLY_LAYOUT,
     )
+    fig.update_xaxes(
+        tickformat="%d %b %Y",
+        rangeslider=dict(visible=show_rangeslider),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def _chart_yearly_environment_totals(df: pd.DataFrame) -> None:
+    yearly = yearly_environment_totals(df)
+    if yearly.empty:
+        st.caption("No yearly data.")
+        return
+
+    year_labels = [str(int(y)) for y in yearly["year"]]
+    fig = go.Figure()
+    for env in ("M2", "SA", "EKS"):
+        if env not in yearly.columns:
+            continue
+        values = yearly[env]
+        if values.isna().all():
+            continue
+        fig.add_trace(
+            go.Bar(
+                y=year_labels,
+                x=values,
+                name=env,
+                orientation="h",
+                marker_color=ENV_COLORS.get(env, "#64748b"),
+                text=[_fmt_num(v) for v in values],
+                textposition="outside",
+            )
+        )
+
+    fig.update_layout(
+        title="Mean total vulnerabilities by year (M2 · SA · EKS)",
+        height=max(320, 56 * len(year_labels)),
+        barmode="group",
+        yaxis_title="Year",
+        xaxis_title="Mean total vulnerability count (weekly average)",
+        yaxis=dict(categoryorder="array", categoryarray=year_labels),
+        **PLOTLY_LAYOUT,
+    )
+    fig.update_xaxes(rangemode="tozero")
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption(
+        "EKS uses mean **M2-Containers Vul Count** (cluster EKS_AEMGovAU_PROD_Cluster); "
+        "available from 2025 onward."
+    )
+
+
+def _render_weekly_trends(df: pd.DataFrame, view_mode: str) -> None:
+    if view_mode == "Table":
+        return
+    if df.empty or "year" not in df.columns:
+        st.caption("No data.")
+        return
+
+    st.markdown("**Weekly snapshots**")
+    st.caption(
+        "One point per scan week (e.g. **8 May** and **15 May 2026**). "
+        "Use sidebar **Years** — include **2026** if recent weeks are missing."
+    )
+    _chart_weekly_ttv_trend(df, title="M2 vs SA TTV by scan week")
+    if "m2_per_server" in df.columns and df["m2_per_server"].notna().any():
+        _chart_weekly_metric(df, "m2_per_server")
+    if "sa_per_server" in df.columns and df["sa_per_server"].notna().any():
+        _chart_weekly_metric(df, "sa_per_server")
+
+    st.divider()
+    st.markdown("**Monthly comparison (year overlay)**")
+    monthly = monthly_per_server_all_years(df)
+    if monthly.empty:
+        st.caption("No monthly per-server data.")
+        return
+
+    st.caption(
+        "Each line is a calendar year (filtered by sidebar **Years**). "
+        "Monthly values are means of weekly snapshots — May is one averaged point, not each week. "
+        "EKS = container vul count ÷ M2 server count."
+    )
+
+    if "m2_per_server" in monthly.columns and monthly["m2_per_server"].notna().any():
+        _chart_monthly_per_server_all_years(monthly, "m2_per_server", "M2 per server")
+    if "sa_per_server" in monthly.columns and monthly["sa_per_server"].notna().any():
+        _chart_monthly_per_server_all_years(monthly, "sa_per_server", "SA per server")
+    if "eks_per_server" in monthly.columns and monthly["eks_per_server"].notna().any():
+        _chart_monthly_per_server_all_years(
+            monthly,
+            "eks_per_server",
+            "EKS per server (container vul ÷ M2 servers)",
+        )
+
+
+def _chart_monthly_per_server_all_years(
+    monthly: pd.DataFrame,
+    column: str,
+    title: str,
+) -> None:
+    if column not in monthly.columns or not monthly[column].notna().any():
+        return
+
+    years = sorted(int(y) for y in monthly["year"].dropna().unique())
+    fig = go.Figure()
+    for i, year in enumerate(years):
+        sub = monthly[(monthly["year"] == year) & monthly[column].notna()].sort_values("month")
+        if sub.empty:
+            continue
+        color = YEAR_LINE_COLORS[i % len(YEAR_LINE_COLORS)]
+        fig.add_trace(
+            go.Scatter(
+                x=sub["month_label"],
+                y=sub[column],
+                mode="lines+markers",
+                name=str(year),
+                line=dict(color=color, width=2),
+                marker=dict(size=7),
+            )
+        )
+
+    if not fig.data:
+        st.caption(f"No {title} data.")
+        return
+
+    fig.update_layout(
+        title=f"{title} — compare years",
+        height=400,
+        xaxis_title="Month",
+        yaxis_title="Per server",
+        legend_title="Year",
+        xaxis=dict(categoryorder="array", categoryarray=MONTH_ORDER_LABELS),
+        **PLOTLY_LAYOUT,
+    )
+    fig.update_yaxes(rangemode="tozero")
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -352,19 +592,22 @@ def _chart_weekly_metric(df: pd.DataFrame, metric: str) -> None:
         st.caption(f"No values for {metric}.")
         return
     label = dict(WEEKLY_METRICS).get(metric, metric.replace("_", " ").title())
+    color = "#2563eb" if metric.startswith("sa_") else "#059669"
     fig = go.Figure(
         go.Scatter(
             x=sub["scan_date"],
             y=sub[metric],
             mode="lines+markers",
-            line=dict(color="#059669", width=2),
+            line=dict(color=color, width=2),
             name=label,
+            hovertemplate="%{x|%d %b %Y}<br>" + label + "=%{y}<extra></extra>",
         )
     )
     title = label
     if metric == "container_vul_count":
         title += " (EKS_AEMGovAU_PROD_Cluster)"
-    fig.update_layout(title=title, height=360, xaxis_title="Week", **PLOTLY_LAYOUT)
+    fig.update_layout(title=title, height=360, xaxis_title="Scan week (Friday)", **PLOTLY_LAYOUT)
+    fig.update_xaxes(tickformat="%d %b %Y")
     st.plotly_chart(fig, use_container_width=True)
 
 

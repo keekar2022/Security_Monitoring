@@ -260,12 +260,60 @@ def ingest_upload(
 ) -> tuple[bool, str]:
     """Append parsed rows if file not yet processed. Returns (success, message)."""
     from monitoring_dashboard.server_vuln_legacy.aem_report_parser import is_aem_report_bytes
+    from monitoring_dashboard.server_vuln_legacy.splunk_report_parser import (
+        is_splunk_nexpose_bytes,
+        merge_splunk_partial_into_weekly_row,
+        parse_splunk_nexpose_bytes,
+    )
 
     file_hash = file_sha256(file_bytes)
     existing = is_file_processed(file_hash)
     if existing:
         processed = existing.get("processed_at", "unknown")
         return False, f"This file was already processed on {processed}. No duplicate entries were added."
+
+    if is_splunk_nexpose_bytes(file_bytes):
+        partial, parse_errors = parse_splunk_nexpose_bytes(file_bytes, filename=filename)
+        if partial is None:
+            detail = "; ".join(parse_errors) if parse_errors else "Splunk parse failed."
+            return False, detail
+        # Splunk exports are real scan data; do not apply AEM spreadsheet projected cutoff.
+        scan_date = partial.get("scan_date")
+
+        existing_rows = _read_jsonl(WEEKLY_METRICS_FILE)
+        by_date = {str(r["scan_date"])[:10]: r for r in existing_rows if r.get("scan_date")}
+        scan_key = str(scan_date)[:10]
+        merged_row = merge_splunk_partial_into_weekly_row(
+            by_date.get(scan_key),
+            partial,
+            upload_id=file_hash,
+            filename=filename,
+        )
+        added = merge_weekly_into_store([merged_row])
+        env = partial.get("environment", "unknown")
+        ledger = load_ledger()
+        ledger.setdefault("uploads", []).append(
+            {
+                "file_sha256": file_hash,
+                "original_filename": filename,
+                "processed_at": _utc_now_iso(),
+                "report_source": f"splunk_{env}",
+                "rows_added": 1,
+                "scan_date_max": scan_key,
+                "splunk_servers": partial.get("servers"),
+                "splunk_ttv": partial.get("ttv"),
+            }
+        )
+        save_ledger(ledger)
+        meta = refresh_meta_from_metrics()
+        meta["last_upload_at"] = _utc_now_iso()
+        save_store_meta(meta)
+        warn = f" ({parse_errors[0]})" if parse_errors else ""
+        return True, (
+            f"Merged Splunk {env.upper()} export for week {scan_key}: "
+            f"{partial.get('servers')} servers, {int(partial.get('ttv', 0))} TTV "
+            f"(net weekly rows changed: {added}).{warn}"
+        )
 
     if not parsed_rows:
         return False, "No valid rows found in the uploaded file."

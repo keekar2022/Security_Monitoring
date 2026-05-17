@@ -1,7 +1,7 @@
 # Concept: Mukesh Kesharwani
 # Contact: mukesh.kesharwani@adobe.com
 """
-Trend Micro Vulnerabilities & Inventory Dashboard — Streamlit host with Okta OIDC.
+Keekar's Security Monitoring Dashboard — Trend Micro metrics, Streamlit + Okta OIDC.
 
 Run locally:
   python3 -m venv .venv && source .venv/bin/activate
@@ -30,13 +30,14 @@ from monitoring_dashboard.bootstrap_auth import (
 )
 from monitoring_dashboard.okta_oidc import build_authorize_url, exchange_code_for_user
 from monitoring_dashboard.secrets_loader import apply_streamlit_secrets
+from monitoring_dashboard.app_meta import APP_TITLE
 from monitoring_dashboard.ui_dashboard import render_dashboard
+from monitoring_dashboard.ui_footer import render_page_footer
 from monitoring_dashboard.ui_settings import render_settings_page
 from monitoring_dashboard.ui_theme import inject_theme
+from monitoring_dashboard.version_info import footer_markdown, get_version_info
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
-
-APP_TITLE = "Vulnerabilities & Inventory Dashboard"
 
 st.set_page_config(
     page_title=APP_TITLE,
@@ -94,7 +95,7 @@ def _okta_logout() -> None:
 
 
 def _render_okta_login() -> None:
-    st.markdown(f"## {APP_TITLE}")
+    st.title(APP_TITLE)
     st.caption("Sign in with your organization Okta account to view vulnerability metrics.")
     callback = resolve_redirect_uri()
     st.caption(f"Okta callback URL (must match Okta app settings): `{callback}`")
@@ -154,7 +155,7 @@ def main() -> None:
         return
 
     if not is_oidc_configured():
-        st.markdown(f"## {APP_TITLE}")
+        st.title(APP_TITLE)
         st.warning("Okta OIDC is not configured. Sign in below to open **Platform Settings**.")
         if not is_settings_authenticated():
             if not render_bootstrap_login():
@@ -167,8 +168,7 @@ def main() -> None:
         return
 
     render_dashboard()
-    st.markdown("---")
-    st.caption("Trend Micro Vision One metrics · Adobe Managed Services")
+    render_page_footer(build_line=footer_markdown(get_version_info()))
 
 
 try:

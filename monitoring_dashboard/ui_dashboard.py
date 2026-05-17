@@ -45,17 +45,17 @@ def render_dashboard() -> None:
 
     tabs = st.tabs(
         [
+            "ServerVulnerabilities-LegacyTool",
             "Container Vulnerabilities",
             "Endpoint Vulnerabilities",
             "Endpoint Inventory",
-            "ServerVulnerabilities-LegacyTool",
         ]
     )
-    for tab, data_type in zip(tabs, TAB_ORDER):
+    with tabs[0]:
+        render_server_vuln_legacy_tab()
+    for tab, data_type in zip(tabs[1:], TAB_ORDER):
         with tab:
             _render_dataset_tab(data_type)
-    with tabs[3]:
-        render_server_vuln_legacy_tab()
 
 
 def _render_dataset_tab(data_type: str) -> None:

@@ -3,10 +3,10 @@
     {
       "file_sha256": "import-aem-2022-2026",
       "original_filename": "bulk-import-2022-2026",
-      "processed_at": "2026-05-17T22:27:50Z",
+      "processed_at": "2026-05-17T22:49:06Z",
       "report_source": "aem_weekly",
-      "rows_added": 251,
-      "scan_date_max": "2027-01-01",
+      "rows_added": 217,
+      "scan_date_max": "2026-05-08",
       "source_files": [
         "2022-AEMGovAu-Vulnerability-Scanning-Report.csv",
         "2023-AEMGovAu-Vulnerability-Scanning-Report.csv",
@@ -14,6 +14,54 @@
         "2025-AEMGovAu-Vulnerability-Scanning-Report.csv",
         "2026-AEMGovAu-Vulnerability-Scanning-Report.csv"
       ]
+    },
+    {
+      "file_sha256": "4ed20d894167d2ed8db196013becc3ab6c5a558d1249288ff9313994aba932e0",
+      "original_filename": "AMSGovCloud_Cust_SA_Acct-2026-05-07.csv",
+      "processed_at": "2026-05-17T23:40:48Z",
+      "report_source": "splunk_sa",
+      "rows_added": 1,
+      "scan_date_max": "2026-05-08",
+      "splunk_servers": 78,
+      "splunk_ttv": 528.0
+    },
+    {
+      "file_sha256": "f658c2f2692a3ab3430c42ca08113f8024aa3c89a5f4bae270472aa5c4afb3cd",
+      "original_filename": "AMSGovCloud_M2-Prod-2026-05-07.csv",
+      "processed_at": "2026-05-17T23:40:49Z",
+      "report_source": "splunk_m2",
+      "rows_added": 1,
+      "scan_date_max": "2026-05-08",
+      "splunk_servers": 10,
+      "splunk_ttv": 66.0
+    },
+    {
+      "file_sha256": "f262f6608f11e617dac8cfb3b1fe5dd731c43724f4faf4510e0f894064cd287c",
+      "original_filename": "AMSGovCloud_Cust_SA_Acct-2026-05-14.csv, AMSGovCloud_M2-Prod-2026-05-14.csv",
+      "processed_at": "2026-05-17T23:43:44Z",
+      "report_source": "splunk_cli",
+      "rows_added": 1,
+      "scan_date_max": "2026-05-15"
+    },
+    {
+      "file_sha256": "f6449abd4a4c4dd15527a9fd95d2ad4fd5ee4f11be12795f53dcfe40e452ce8d",
+      "original_filename": "AMSGovCloud_M2-Prod-2026-05-14.csv",
+      "processed_at": "2026-05-17T23:47:29Z",
+      "report_source": "splunk_m2",
+      "rows_added": 1,
+      "scan_date_max": "2026-05-15",
+      "splunk_servers": 10,
+      "splunk_ttv": 66.0
+    },
+    {
+      "file_sha256": "ba67d1ffb1ea2c083cd820f09eb5f8e27cd192e72ff45ea5e2cae304a127e509",
+      "original_filename": "AMSGovCloud_Cust_SA_Acct-2026-05-14.csv",
+      "processed_at": "2026-05-17T23:48:02Z",
+      "report_source": "splunk_sa",
+      "rows_added": 1,
+      "scan_date_max": "2026-05-15",
+      "splunk_servers": 79,
+      "splunk_ttv": 374.0
     }
   ]
 }

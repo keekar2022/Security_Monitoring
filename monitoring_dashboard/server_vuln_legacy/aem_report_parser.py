@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import os
+from datetime import date
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -13,6 +15,39 @@ import pandas as pd
 
 CONTAINER_CLUSTER = "EKS_AEMGovAU_PROD_Cluster"
 SKIP_ROW_PREFIXES = ("average of year", "median of year", "note:")
+
+# Spreadsheet forward-fill / projected weeks (see CSV note row). Override: AEM_PREDICTED_CUTOFF=YYYY-MM-DD
+_DEFAULT_PREDICTED_CUTOFF = date(2026, 5, 13)
+
+
+def predicted_data_cutoff() -> date:
+    raw = (os.environ.get("AEM_PREDICTED_CUTOFF") or "").strip()
+    if raw:
+        return pd.to_datetime(raw).date()
+    return _DEFAULT_PREDICTED_CUTOFF
+
+
+def is_predicted_snapshot(scan_date: str | None) -> bool:
+    """True when scan_date is on/after the configured projected-data cutoff."""
+    if not scan_date:
+        return False
+    try:
+        d = pd.to_datetime(scan_date).date()
+    except (TypeError, ValueError):
+        return False
+    return d >= predicted_data_cutoff()
+
+
+def filter_predicted_rows(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """Drop projected/forward-filled snapshots; returns (kept, removed_count)."""
+    kept: list[dict[str, Any]] = []
+    removed = 0
+    for row in rows:
+        if is_predicted_snapshot(row.get("scan_date")):
+            removed += 1
+            continue
+        kept.append(row)
+    return kept, removed
 
 _LEGACY_COLS = 7
 _EXTENDED_MIN_COLS = 10
@@ -70,6 +105,7 @@ def parse_aem_report_bytes(
     *,
     source_file: str = "",
     upload_id: str = "import-aem-2022-2026",
+    apply_predicted_filter: bool = True,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """
     Parse one AEM Gov AU scanning report CSV.
@@ -149,6 +185,16 @@ def parse_aem_report_bytes(
 
     if not rows and not errors:
         errors.append("No weekly data rows parsed from CSV.")
+
+    if apply_predicted_filter:
+        rows, dropped = filter_predicted_rows(rows)
+        if dropped:
+            cutoff = predicted_data_cutoff().isoformat()
+            errors.append(
+                f"Excluded {dropped} projected row(s) with scan_date on/after {cutoff} "
+                f"(set AEM_PREDICTED_CUTOFF to change)."
+            )
+
     return rows, errors
 
 
@@ -183,7 +229,9 @@ def merge_weekly_records(
             row = dict(row)
             row["source_file"] = source_file
             by_date[key] = row
-    return sorted(by_date.values(), key=lambda r: r["scan_date"])
+    merged = sorted(by_date.values(), key=lambda r: r["scan_date"])
+    filtered, _ = filter_predicted_rows(merged)
+    return filtered
 
 
 def validate_container_counts(
