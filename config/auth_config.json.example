@@ -1,0 +1,17 @@
+{
+  "_comment": "Copy to auth_config.json (gitignored) or configure via Streamlit Settings UI",
+  "oauth": {
+    "enabled": false,
+    "providers": {
+      "okta": {
+        "enabled": false,
+        "domain": "your-org.okta.com",
+        "authServerId": "default",
+        "clientId": "",
+        "clientSecret": "",
+        "redirectUri": "http://localhost:8501/",
+        "scope": "openid profile email"
+      }
+    }
+  }
+}

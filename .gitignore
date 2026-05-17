@@ -1,5 +1,17 @@
 # Environment variables
 .env
+.streamlit/secrets.toml
+.streamlit/credentials.toml
+
+# Streamlit / OIDC auth config (may contain client secret)
+config/auth_config.json
+
+# Python venv
+.venv/
+.venv-streamlit/
+
+# Local dashboard runtime
+.run/
 
 # Token files
 *.token
