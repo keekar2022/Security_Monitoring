@@ -94,12 +94,33 @@ def verify_signed_state(state: str, client_secret: str) -> dict[str, Any] | None
         return None
 
 
+def _runtime_app_url() -> str:
+    """Derive OAuth callback from the browser URL (Streamlit Community Cloud)."""
+    try:
+        import streamlit as st
+        from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+
+        if get_script_run_ctx() is None:
+            return ""
+        url = (getattr(st.context, "url", None) or "").strip()
+        if not url.startswith("http"):
+            return ""
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.netloc:
+            return ""
+        return f"{parsed.scheme}://{parsed.netloc}/"
+    except Exception:
+        return ""
+
+
 def resolve_redirect_uri(explicit: str | None = None) -> str:
     uri = (explicit or "").strip()
     if not uri:
         uri = (os.environ.get("OKTA_REDIRECT_URI") or "").strip()
     if not uri:
         uri = (os.environ.get("STREAMLIT_APP_URL") or "").strip()
+    if not uri:
+        uri = _runtime_app_url()
     if not uri:
         uri = "http://localhost:8501/"
     if not uri.endswith("/"):

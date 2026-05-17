@@ -15,13 +15,14 @@ Deploy (Streamlit Community Cloud): push branch main or Development to
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
 
+from monitoring_dashboard.async_utils import run_async
 from monitoring_dashboard.auth_config import is_oidc_configured
+from monitoring_dashboard.okta_oidc import resolve_redirect_uri
 from monitoring_dashboard.bootstrap_auth import (
     is_settings_authenticated,
     render_bootstrap_login,
@@ -58,18 +59,29 @@ def _handle_oauth_callback() -> bool:
     if isinstance(state, list):
         state = state[0]
     try:
-        user = asyncio.run(exchange_code_for_user(code, state))
+        user = run_async(exchange_code_for_user(code, state))
         st.session_state.okta_authenticated = True
         st.session_state.okta_user = user
+        st.session_state.pop("okta_redirect_url", None)
         st.query_params.clear()
         st.rerun()
-    except Exception:
+    except Exception as exc:
         st.error("Sign-in failed. Please try again.")
+        st.caption(str(exc))
         if params.get("error"):
             err = params.get("error")
-            st.caption(str(err[0] if isinstance(err, list) else err))
+            desc = params.get("error_description")
+            st.caption(
+                f"Okta: {err[0] if isinstance(err, list) else err}"
+                + (
+                    f" — {desc[0] if isinstance(desc, list) else desc}"
+                    if desc
+                    else ""
+                )
+            )
         st.query_params.clear()
-    return True
+        return False
+    return False
 
 
 def _okta_authenticated() -> bool:
@@ -84,16 +96,32 @@ def _okta_logout() -> None:
 def _render_okta_login() -> None:
     st.markdown(f"## {APP_TITLE}")
     st.caption("Sign in with your organization Okta account to view vulnerability metrics.")
+    callback = resolve_redirect_uri()
+    st.caption(f"Okta callback URL (must match Okta app settings): `{callback}`")
+
+    redirect_url = st.session_state.get("okta_redirect_url")
+    if redirect_url:
+        st.link_button("Continue to Okta →", redirect_url, type="primary")
+        st.markdown(
+            f'<meta http-equiv="refresh" content="0;url={redirect_url}">',
+            unsafe_allow_html=True,
+        )
+        return
+
     if st.button("Sign in with Okta", type="primary"):
         try:
-            url = asyncio.run(build_authorize_url())
-            st.session_state.pending_okta_url = url
+            st.session_state.okta_redirect_url = run_async(build_authorize_url())
+            st.rerun()
         except Exception as exc:
             st.error("Could not start Okta sign-in. Check SSO configuration.")
             st.caption(str(exc))
-    url = st.session_state.get("pending_okta_url")
-    if url:
-        st.link_button("Continue to Okta →", url, type="primary")
+
+    with st.expander("First-time setup or SSO issues?"):
+        st.markdown(
+            "Use **Platform settings (admin)** in the sidebar to configure Okta, "
+            "or set secrets in Streamlit Cloud (**App settings → Secrets**). "
+            "On Community Cloud, use Secrets (not Save in Settings) for production credentials."
+        )
 
 
 def _render_sidebar() -> None:
@@ -114,8 +142,7 @@ def _render_sidebar() -> None:
 
 
 def main() -> None:
-    if _handle_oauth_callback():
-        return
+    _handle_oauth_callback()
 
     _render_sidebar()
 
@@ -144,4 +171,9 @@ def main() -> None:
     st.caption("Trend Micro Vision One metrics · Adobe Managed Services")
 
 
-main()
+try:
+    main()
+except Exception as exc:
+    st.error("The dashboard could not start.")
+    with st.expander("Error details"):
+        st.exception(exc)

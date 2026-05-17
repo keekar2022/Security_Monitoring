@@ -5,10 +5,9 @@
 
 from __future__ import annotations
 
-import asyncio
-
 import streamlit as st
 
+from monitoring_dashboard.async_utils import run_async
 from monitoring_dashboard.auth_config import (
     MASKED_SECRET,
     config_for_display,
@@ -89,7 +88,7 @@ def _render_sso_tab() -> None:
     }
 
     if test_btn:
-        ok, msg = asyncio.run(test_okta_connection(draft))
+        ok, msg = run_async(test_okta_connection(draft))
         if ok:
             st.success(msg)
         else:

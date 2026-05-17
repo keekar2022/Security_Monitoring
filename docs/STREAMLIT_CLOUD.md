@@ -56,7 +56,8 @@ Copy from [`.streamlit/secrets.toml.example`](../.streamlit/secrets.toml.example
 | `OKTA_CLIENT_ID` | OIDC application client ID |
 | `OKTA_CLIENT_SECRET` | OIDC client secret |
 | `OKTA_AUTH_SERVER_ID` | Optional, e.g. `default` |
-| `OKTA_REDIRECT_URI` | Optional; defaults to app URL |
+| `OKTA_REDIRECT_URI` | **Required on Cloud** — e.g. `https://aemgovau-secmon.streamlit.app/` |
+| `STREAMLIT_APP_URL` | Same as redirect URI (optional if redirect is set) |
 
 ## Okta application URLs
 

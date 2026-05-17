@@ -15,6 +15,21 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG_PATH = ROOT / "config" / "auth_config.json"
 MASKED_SECRET = "••••••••"
 
+_PLACEHOLDER_VALUES = frozenset(
+    {
+        "",
+        "your-org.okta.com",
+        "your_client_id",
+        "your_client_secret",
+        "change-me",
+        "change-me-after-first-login",
+    }
+)
+
+
+def _is_placeholder(value: str) -> bool:
+    return (value or "").strip().lower() in _PLACEHOLDER_VALUES
+
 
 def config_path() -> Path:
     return Path(os.environ.get("AUTH_CONFIG_PATH", str(DEFAULT_CONFIG_PATH)))
@@ -52,9 +67,10 @@ def _merge_env_into_okta(okta: dict[str, Any]) -> dict[str, Any]:
     }
     for field, env_key in env_map.items():
         val = (os.environ.get(env_key) or "").strip()
-        if val:
+        if val and not _is_placeholder(val):
             out[field] = val
-    if (os.environ.get("OKTA_CLIENT_ID") or "").strip():
+    client_id = (os.environ.get("OKTA_CLIENT_ID") or "").strip()
+    if client_id and not _is_placeholder(client_id):
         out["enabled"] = True
     return out
 
@@ -122,6 +138,8 @@ def is_oidc_configured() -> bool:
     domain = (okta.get("domain") or "").strip()
     client_id = (okta.get("clientId") or "").strip()
     secret = get_effective_client_secret(okta)
+    if _is_placeholder(domain) or _is_placeholder(client_id) or _is_placeholder(secret):
+        return False
     return bool(domain and client_id and secret)
 
 
