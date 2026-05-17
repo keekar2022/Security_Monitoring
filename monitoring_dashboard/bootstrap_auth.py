@@ -17,14 +17,30 @@ _DEFAULT_PASSWORD_HASH = (
 )
 _MAX_ATTEMPTS = 5
 _LOCKOUT_SECONDS = 60
+_DEFAULT_PASSWORD = "TryMein2026"
+_PASSWORD_PLACEHOLDERS = frozenset(
+    {"", "change-me", "change-me-after-first-login", "your-password", "your_password"}
+)
 
 
 def _admin_user() -> str:
     return (os.environ.get("SETTINGS_ADMIN_USER") or "mkesharw").strip()
 
 
+def _configured_admin_password() -> str:
+    """Return explicit admin password from env, or empty if unset / placeholder."""
+    value = (os.environ.get("SETTINGS_ADMIN_PASSWORD") or "").strip()
+    if value.lower() in _PASSWORD_PLACEHOLDERS:
+        return ""
+    return value
+
+
+def _using_cloud_password_override() -> bool:
+    return bool(_configured_admin_password())
+
+
 def _verify_password(password: str) -> bool:
-    env_password = (os.environ.get("SETTINGS_ADMIN_PASSWORD") or "").strip()
+    env_password = _configured_admin_password()
     if env_password:
         return password == env_password
     env_hash = (os.environ.get("SETTINGS_ADMIN_PASSWORD_BCRYPT") or "").strip()
@@ -59,10 +75,16 @@ def render_bootstrap_login() -> bool:
 
     st.subheader("Settings access")
     st.caption("Sign in to configure Okta OIDC. Okta is not configured yet.")
-    st.caption(
-        f"Username: **{_admin_user()}** · Password is in `.env` as `SETTINGS_ADMIN_PASSWORD` "
-        "(case-sensitive, e.g. `TryMein2026` with capital **M**)."
-    )
+    if _using_cloud_password_override():
+        st.caption(
+            f"Username: **{_admin_user()}** · Password is the value of "
+            "`SETTINGS_ADMIN_PASSWORD` in Streamlit Cloud **Secrets** (not the code default)."
+        )
+    else:
+        st.caption(
+            f"Username: **{_admin_user()}** · Default password: **`{_DEFAULT_PASSWORD}`** "
+            "(capital **M**). Override via `SETTINGS_ADMIN_PASSWORD` in Secrets or `.env`."
+        )
 
     with st.form("bootstrap_login"):
         username = st.text_input("Username", autocomplete="username")
