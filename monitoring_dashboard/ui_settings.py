@@ -17,6 +17,7 @@ from monitoring_dashboard.auth_config import (
 )
 from monitoring_dashboard.bootstrap_auth import is_settings_authenticated, settings_logout
 from monitoring_dashboard.okta_oidc import resolve_redirect_uri, test_okta_connection
+from monitoring_dashboard.ui_collection import render_collection_tab
 
 
 def render_settings_page(*, allow_when_configured: bool = False) -> None:
@@ -32,9 +33,11 @@ def render_settings_page(*, allow_when_configured: bool = False) -> None:
                 settings_logout()
                 st.rerun()
 
-    tab_sso = st.tabs(["SSO Integration"])[0]
+    tab_sso, tab_collect = st.tabs(["SSO Integration", "Data collection"])
     with tab_sso:
         _render_sso_tab()
+    with tab_collect:
+        render_collection_tab()
 
 
 def _render_sso_tab() -> None:

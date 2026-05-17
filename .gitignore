@@ -13,6 +13,9 @@ config/auth_config.json
 # Local dashboard runtime
 .run/
 
+# Generated credential exports (migrate_pass_to_cloud_credentials.sh)
+secrets/generated/
+
 # Token files
 *.token
 *token*.json

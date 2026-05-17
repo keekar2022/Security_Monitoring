@@ -37,9 +37,14 @@ FILES=(
   .streamlit/secrets.toml.example
   .env.example
   config/auth_config.json.example
+  config/collection_schedule.json
+  config/collection_schedule.json.example
   docs/STREAMLIT_CLOUD.md
   scripts/start_dashboard.sh
   scripts/publish_streamlit_github.sh
+  scripts/run_scheduled_collect.sh
+  scripts/migrate_pass_to_cloud_credentials.sh
+  .github/workflows/collect-metrics.yml
   data/container_vulnerability_metrics.jsonl
   data/endpoint_inventory_metrics.jsonl
   data/endpoint_vulnerability_metrics.jsonl

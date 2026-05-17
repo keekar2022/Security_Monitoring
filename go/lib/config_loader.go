@@ -35,16 +35,16 @@ type EnvironmentConfig struct {
 
 // DeploymentConfigFile represents the deployment_config.json structure
 type DeploymentConfigFile struct {
-	CurrentEnvironment string                        `json:"current_environment"`
-	Environments       map[string]EnvironmentConfig  `json:"environments"`
+	CurrentEnvironment string                       `json:"current_environment"`
+	Environments       map[string]EnvironmentConfig `json:"environments"`
 }
 
 // EnvironmentInfo represents environment information
 type EnvironmentInfo struct {
-	Name            string `json:"name"`
-	Region          string `json:"region"`
-	APIBaseURL      string `json:"api_base_url"`
-	PortalURL       string `json:"portal_url"`
+	Name             string `json:"name"`
+	Region           string `json:"region"`
+	APIBaseURL       string `json:"api_base_url"`
+	PortalURL        string `json:"portal_url"`
 	EnvironmentLabel string `json:"environment_label"`
 }
 
@@ -56,28 +56,28 @@ type EnvironmentsFile struct {
 
 // TrendMicroConfig manages configuration loading
 type TrendMicroConfig struct {
-	configDir   string
-	usePass     bool
-	credentials *DeploymentConfigFile
+	configDir    string
+	usePass      bool
+	credentials  *DeploymentConfigFile
 	environments *EnvironmentsFile
 }
 
 // NewTrendMicroConfig creates a new configuration loader
 func NewTrendMicroConfig(configDir string, usePass *bool) (*TrendMicroConfig, error) {
 	config := &TrendMicroConfig{}
-	
+
 	// Set config directory
 	if configDir != "" {
 		config.configDir = configDir
 	} else {
-		// Default to ../config relative to current directory
 		cwd, err := os.Getwd()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get working directory: %w", err)
 		}
+		// Default to config relative to current directory
 		config.configDir = filepath.Join(cwd, "config")
 	}
-	
+
 	// Determine if we should use pass
 	if usePass != nil {
 		config.usePass = *usePass
@@ -92,13 +92,13 @@ func NewTrendMicroConfig(configDir string, usePass *bool) (*TrendMicroConfig, er
 			config.usePass = isPassAvailable()
 		}
 	}
-	
+
 	slog.Debug("TrendMicroConfig initialized",
 		slog.String("service.name", "trend-micro-config"),
 		slog.String("config_dir", config.configDir),
 		slog.Bool("use_pass", config.usePass),
 	)
-	
+
 	return config, nil
 }
 
@@ -118,29 +118,69 @@ func (c *TrendMicroConfig) getFromPass(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve '%s' from pass: %w", path, err)
 	}
-	
+
 	// Return first line
 	lines := strings.Split(string(output), "\n")
 	if len(lines) > 0 {
 		return strings.TrimSpace(lines[0]), nil
 	}
-	
+
 	return "", fmt.Errorf("empty response from pass for '%s'", path)
+}
+
+// listPassEnvironments returns environment names from pass (e.g. pass ls TrendMicro).
+// Used when deployment_config.json is missing and USE_PASS is true.
+func (c *TrendMicroConfig) listPassEnvironments() ([]string, error) {
+	cmd := exec.Command("pass", "ls", "TrendMicro")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("pass ls TrendMicro: %w", err)
+	}
+	var names []string
+	prefix := "TrendMicro/"
+	for _, line := range strings.Split(string(output), "\n") {
+		line = strings.TrimSuffix(strings.TrimSpace(line), "/")
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, prefix) {
+			rest := strings.TrimPrefix(line, prefix)
+			// rest may be "env" or "env/api_token" etc.; we want top-level env names only
+			if idx := strings.Index(rest, "/"); idx >= 0 {
+				rest = rest[:idx]
+			}
+			if rest != "" {
+				names = append(names, rest)
+			}
+		} else if !strings.Contains(line, "/") {
+			names = append(names, line)
+		}
+	}
+	// dedupe
+	seen := make(map[string]bool)
+	var out []string
+	for _, n := range names {
+		if !seen[n] {
+			seen[n] = true
+			out = append(out, n)
+		}
+	}
+	return out, nil
 }
 
 // loadJSON loads a JSON file from the config directory
 func (c *TrendMicroConfig) loadJSON(filename string, v interface{}) error {
 	filePath := filepath.Join(c.configDir, filename)
-	
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", filePath, err)
 	}
-	
+
 	if err := json.Unmarshal(data, v); err != nil {
 		return fmt.Errorf("failed to parse %s: %w", filePath, err)
 	}
-	
+
 	return nil
 }
 
@@ -168,6 +208,22 @@ func (c *TrendMicroConfig) LoadEnvironments() (*EnvironmentsFile, error) {
 	return c.environments, nil
 }
 
+// envTokenKey returns the environment variable name for an API token (e.g. TRENDMICRO_PRODUCTION_API_TOKEN).
+func envTokenKey(environment string) string {
+	normalized := strings.ToUpper(strings.ReplaceAll(environment, "-", "_"))
+	return fmt.Sprintf("TRENDMICRO_%s_API_TOKEN", normalized)
+}
+
+// getTokenFromEnv reads a Trend Micro API token from the process environment (CI / Streamlit / NAS without pass).
+func getTokenFromEnv(environment string) (string, bool) {
+	key := envTokenKey(environment)
+	token := strings.TrimSpace(os.Getenv(key))
+	if token == "" || token == "STORED_IN_PASS_VAULT" {
+		return "", false
+	}
+	return token, true
+}
+
 // GetAPIToken retrieves the API token for the specified environment
 func (c *TrendMicroConfig) GetAPIToken(environment string) (string, error) {
 	// Try pass first if enabled
@@ -176,23 +232,32 @@ func (c *TrendMicroConfig) GetAPIToken(environment string) (string, error) {
 		if err == nil {
 			return token, nil
 		}
-		slog.Warn("Could not retrieve token from pass, falling back to config file",
+		slog.Warn("Could not retrieve token from pass, falling back to environment/config",
 			slog.String("error", err.Error()),
 		)
 	}
-	
+
+	if token, ok := getTokenFromEnv(environment); ok {
+		return token, nil
+	}
+
 	// Fallback to config file
 	creds, err := c.LoadCredentials()
 	if err != nil {
 		return "", err
 	}
-	
+
 	envConfig, ok := creds.Environments[environment]
 	if !ok {
 		return "", fmt.Errorf("environment '%s' not found in configuration", environment)
 	}
-	
-	return envConfig.APICredentials.APIToken, nil
+
+	token := strings.TrimSpace(envConfig.APICredentials.APIToken)
+	if token == "" || token == "STORED_IN_PASS_VAULT" {
+		return "", fmt.Errorf("no API token for environment '%s' (set pass, %s, or deployment_config.json)", environment, envTokenKey(environment))
+	}
+
+	return token, nil
 }
 
 // GetAPIBaseURL gets the API base URL for the environment
@@ -204,33 +269,46 @@ func (c *TrendMicroConfig) GetAPIBaseURL(environment string) (string, error) {
 			return url, nil
 		}
 	}
-	
+
 	// Fallback to environments.json
 	envs, err := c.LoadEnvironments()
 	if err != nil {
 		return "", err
 	}
-	
+
 	envInfo, ok := envs.Environments[environment]
 	if !ok {
 		return "", fmt.Errorf("environment '%s' not found", environment)
 	}
-	
+
 	return envInfo.APIBaseURL, nil
 }
 
 // GetDeploymentInfo gets deployment information for the environment
 func (c *TrendMicroConfig) GetDeploymentInfo(environment string) (*DeploymentConfig, error) {
 	creds, err := c.LoadCredentials()
+	if err != nil && c.usePass {
+		// Pass-only mode without deployment_config.json: build minimal DeploymentConfig from pass
+		apiBaseURL, _ := c.getFromPass(fmt.Sprintf("TrendMicro/%s/api_base_url", environment))
+		businessID, _ := c.getFromPass(fmt.Sprintf("TrendMicro/%s/business_id", environment))
+		return &DeploymentConfig{
+			BusinessName: environment,
+			BusinessID:   businessID,
+			Region:       "",
+			RegionName:   "",
+			APIBaseURL:   apiBaseURL,
+			PortalURL:    "",
+		}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	envConfig, ok := creds.Environments[environment]
 	if !ok {
 		return nil, fmt.Errorf("environment '%s' not found", environment)
 	}
-	
+
 	return &envConfig.Deployment, nil
 }
 
@@ -240,7 +318,7 @@ func (c *TrendMicroConfig) GetCommonHeaders(environment string, includeToken boo
 		"Content-Type": "application/json",
 		"Accept":       "application/json",
 	}
-	
+
 	if includeToken {
 		token, err := c.GetAPIToken(environment)
 		if err != nil {
@@ -248,7 +326,7 @@ func (c *TrendMicroConfig) GetCommonHeaders(environment string, includeToken boo
 		}
 		headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
 	}
-	
+
 	return headers, nil
 }
 
@@ -258,23 +336,23 @@ func (c *TrendMicroConfig) CheckTokenExpiry(environment string) (map[string]inte
 	if err != nil {
 		return nil, err
 	}
-	
+
 	envConfig, ok := creds.Environments[environment]
 	if !ok {
 		return nil, fmt.Errorf("environment '%s' not found", environment)
 	}
-	
+
 	expiresAt := envConfig.APICredentials.ExpiresAt
 	expiryDate := time.Unix(expiresAt, 0)
 	now := time.Now()
 	daysRemaining := int(expiryDate.Sub(now).Hours() / 24)
-	
+
 	return map[string]interface{}{
-		"expires_at":        expiresAt,
-		"expiry_date":       expiryDate.Format("2006-01-02"),
-		"days_remaining":    daysRemaining,
-		"is_expiring_soon":  daysRemaining < 30,
-		"is_expired":        daysRemaining < 0,
+		"expires_at":       expiresAt,
+		"expiry_date":      expiryDate.Format("2006-01-02"),
+		"days_remaining":   daysRemaining,
+		"is_expiring_soon": daysRemaining < 30,
+		"is_expired":       daysRemaining < 0,
 	}, nil
 }
 
@@ -284,44 +362,60 @@ func (c *TrendMicroConfig) GetEnvironmentLabel(environment string) (string, erro
 	if err != nil {
 		return "", err
 	}
-	
+
 	envInfo, ok := envs.Environments[environment]
 	if !ok {
 		return strings.Title(environment), nil
 	}
-	
+
 	if envInfo.EnvironmentLabel != "" {
 		return envInfo.EnvironmentLabel, nil
 	}
-	
+
 	return strings.Title(environment), nil
 }
 
 // ListAvailableEnvironments lists all available environments
 func (c *TrendMicroConfig) ListAvailableEnvironments() (map[string]map[string]interface{}, error) {
 	creds, err := c.LoadCredentials()
+	if err != nil && c.usePass {
+		// When USE_PASS is true and deployment_config.json is missing (e.g. in Docker without config mount), list from pass
+		envNames, passErr := c.listPassEnvironments()
+		if passErr != nil {
+			return nil, passErr
+		}
+		result := make(map[string]map[string]interface{})
+		for _, name := range envNames {
+			apiBaseURL, _ := c.getFromPass(fmt.Sprintf("TrendMicro/%s/api_base_url", name))
+			result[name] = map[string]interface{}{
+				"api_base_url":    apiBaseURL,
+				"has_credentials": true,
+			}
+		}
+		return result, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	envs, err := c.LoadEnvironments()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	result := make(map[string]map[string]interface{})
-	
+
 	// Get environments from credentials
 	for envName, envData := range creds.Environments {
 		result[envName] = map[string]interface{}{
-			"business_name":    envData.Deployment.BusinessName,
-			"region":           envData.Deployment.Region,
-			"api_base_url":     envData.Deployment.APIBaseURL,
-			"portal_url":       envData.Deployment.PortalURL,
-			"has_credentials":  true,
+			"business_name":   envData.Deployment.BusinessName,
+			"region":          envData.Deployment.Region,
+			"api_base_url":    envData.Deployment.APIBaseURL,
+			"portal_url":      envData.Deployment.PortalURL,
+			"has_credentials": true,
 		}
 	}
-	
+
 	// Add environments from environments.json without credentials
 	for envName, envData := range envs.Environments {
 		if _, exists := result[envName]; !exists {
@@ -334,7 +428,7 @@ func (c *TrendMicroConfig) ListAvailableEnvironments() (map[string]map[string]in
 			}
 		}
 	}
-	
+
 	return result, nil
 }
 

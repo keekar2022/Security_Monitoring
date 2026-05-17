@@ -84,3 +84,66 @@ streamlit run app.py
 ```
 
 Okta callback for local: `http://localhost:8501/`
+
+## Scheduled data collection
+
+Streamlit Cloud **does not** run Trend Micro collectors. Collection runs via **GitHub Actions** (primary) and optional **NAS/Mac cron**, then pushes updated `data/*.jsonl` to GitHub for this app to display.
+
+### 1. Migrate API keys from local pass
+
+On a machine with `pass` and your Trend Micro tokens:
+
+```bash
+chmod +x scripts/migrate_pass_to_cloud_credentials.sh
+./scripts/migrate_pass_to_cloud_credentials.sh
+```
+
+This writes (gitignored, mode `600`):
+
+- `secrets/generated/streamlit_secrets.fragment.toml` → paste into **Streamlit Cloud → Secrets**
+- `secrets/generated/set_github_secrets.sh` → run locally to set GitHub repository secrets
+- `secrets/generated/<env>.token` → used by the GitHub secret script
+
+### 2. GitHub Actions secrets
+
+Set repository secrets on `keekar2022/Security_Monitoring` (names must match):
+
+| Secret | Purpose |
+|--------|---------|
+| `TRENDMICRO_PRODUCTION_API_TOKEN` | Trend Micro API token |
+| `TRENDMICRO_PRODUCTION_AU_API_TOKEN` | AU production token |
+| `TRENDMICRO_QUALITY_TEST_API_TOKEN` | QTE token |
+| `TRENDMICRO_AMS_QTE_API_TOKEN` | AMS QTE token |
+| `COLLECTION_FREQUENCY` | Optional override: `daily`, `weekly`, or `monthly` |
+
+Enable workflow [`.github/workflows/collect-metrics.yml`](../.github/workflows/collect-metrics.yml) (runs daily 06:00 UTC; skips if not due).
+
+Manual run: **Actions → Collect security metrics → Run workflow** (use `force=true` to ignore schedule).
+
+### 3. Schedule policy
+
+Default: [`config/collection_schedule.json`](../config/collection_schedule.json) (`frequency`: daily).
+
+| Frequency | Runs when |
+|-----------|-----------|
+| `daily` | ≥ 1 day since last success |
+| `weekly` | ≥ 7 days |
+| `monthly` | ≥ 30 days |
+
+Override without git commit: set `COLLECTION_FREQUENCY` in Streamlit Secrets and GitHub secret `COLLECTION_FREQUENCY`.
+
+### 4. Streamlit Settings → Data collection
+
+After bootstrap/Okta login → **Platform settings** → **Data collection** tab:
+
+- Last run, next due, environments
+- **Run now (force)** — triggers GitHub Actions if `WORKFLOW_DISPATCH_TOKEN` is set
+- Setup instructions
+
+### 5. NAS / Mac cron (optional backup)
+
+```bash
+0 7 * * * cd /path/to/Monitoring-API-Dev && USE_PASS=true ./scripts/run_scheduled_collect.sh >> logs/collect.log 2>&1
+```
+
+Use **either** GitHub Actions **or** `PUSH_AFTER_COLLECT=true` on NAS — not both pushing to the same branch.

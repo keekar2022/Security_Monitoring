@@ -11,6 +11,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from monitoring_dashboard.collection_schedule import get_last_run, load_meta
 from monitoring_dashboard.data_loader import load_jsonl
 from monitoring_dashboard.metrics import (
     SEVERITY_COLORS,
@@ -36,7 +37,16 @@ TAB_ORDER = ["container", "endpointVuln", "endpoint"]
 
 def render_dashboard() -> None:
     st.markdown("## Vulnerabilities & Inventory Dashboard")
-    st.caption("Trend Micro Vision One — OpenTelemetry metrics")
+    last = get_last_run()
+    meta = load_meta()
+    if last:
+        st.caption(
+            f"Trend Micro Vision One — OpenTelemetry metrics · Data as of "
+            f"{last.strftime('%Y-%m-%d %H:%M UTC')}"
+            + (f" ({meta.get('trigger', '')})" if meta.get("trigger") else "")
+        )
+    else:
+        st.caption("Trend Micro Vision One — OpenTelemetry metrics · No collection metadata yet")
 
     tabs = st.tabs(
         [

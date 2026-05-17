@@ -1,0 +1,73 @@
+# Concept: Mukesh Kesharwani
+# Contact: mukesh.kesharwani@adobe.com
+#
+# Scheduled Trend Micro metrics collection → commit data/ for Streamlit Cloud.
+name: Collect security metrics
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Run even if schedule says not due
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    env:
+      USE_PASS: "false"
+      AUTO_PUSH: "false"
+      COLLECTION_TRIGGER: github_actions
+      COLLECTION_FREQUENCY: ${{ secrets.COLLECTION_FREQUENCY }}
+      TRENDMICRO_PRODUCTION_API_TOKEN: ${{ secrets.TRENDMICRO_PRODUCTION_API_TOKEN }}
+      TRENDMICRO_PRODUCTION_AU_API_TOKEN: ${{ secrets.TRENDMICRO_PRODUCTION_AU_API_TOKEN }}
+      TRENDMICRO_QUALITY_TEST_API_TOKEN: ${{ secrets.TRENDMICRO_QUALITY_TEST_API_TOKEN }}
+      TRENDMICRO_AMS_QTE_API_TOKEN: ${{ secrets.TRENDMICRO_AMS_QTE_API_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Build collectors
+        run: make -C go tools
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scheduled collection
+        env:
+          FORCE_COLLECT: ${{ github.event.inputs.force || 'false' }}
+        run: |
+          chmod +x scripts/run_scheduled_collect.sh
+          ./scripts/run_scheduled_collect.sh
+
+      - name: Commit and push data updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/*.jsonl data/collection_meta.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No data changes to push."
+            exit 0
+          fi
+          git commit -m "chore: update security metrics data [skip ci]"
+          git push

@@ -20,14 +20,26 @@ _SECRET_KEYS = (
     "OKTA_STATE_SIGNING_KEY",
     "DATA_DIR",
     "STREAMLIT_APP_URL",
+    "COLLECTION_FREQUENCY",
+    "COLLECTION_ENABLED",
+    "GITHUB_REPO",
+    "GITHUB_REF",
+    "WORKFLOW_DISPATCH_TOKEN",
+    "GITHUB_TOKEN",
 )
+
+
+def _should_apply_key(key: str) -> bool:
+    if key in _SECRET_KEYS:
+        return True
+    return key.startswith("TRENDMICRO_") and key.endswith("_API_TOKEN")
 
 
 def _set_from_mapping(mapping: object) -> None:
     if not hasattr(mapping, "items"):
         return
     for key, value in mapping.items():
-        if key in _SECRET_KEYS and value is not None:
+        if _should_apply_key(key) and value is not None:
             text = str(value).strip()
             if text and not (os.environ.get(key) or "").strip():
                 os.environ[key] = text
