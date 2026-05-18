@@ -1,0 +1,12 @@
+{
+  "last_success_at": "2026-05-18T21:23:39Z",
+  "frequency": "daily",
+  "environments": [
+    "AMS_QTE",
+    "production",
+    "production_au",
+    "quality_test"
+  ],
+  "duration_seconds": 704.0,
+  "trigger": "github_actions"
+}
