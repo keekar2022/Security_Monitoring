@@ -135,6 +135,7 @@ def write_meta_after_success(
     trigger: str,
     frequency: str | None = None,
     failed_environments: list[str] | None = None,
+    partial_environments: list[str] | None = None,
 ) -> None:
     policy = load_policy()
     meta = {
@@ -146,6 +147,9 @@ def write_meta_after_success(
     }
     if failed_environments:
         meta["failed_environments"] = failed_environments
+    if partial_environments:
+        meta["partial_environments"] = partial_environments
+    if failed_environments or partial_environments:
         meta["partial"] = True
     META_PATH.parent.mkdir(parents=True, exist_ok=True)
     with META_PATH.open("w", encoding="utf-8") as f:

@@ -112,11 +112,18 @@ def render_collection_tab() -> None:
     envs = meta.get("environments") or list_credentialed_environments()
     if envs:
         st.markdown("**Environments:** " + ", ".join(envs))
-    if meta.get("failed_environments"):
+    partial_envs = meta.get("partial_environments") or []
+    failed_envs = meta.get("failed_environments") or []
+    if partial_envs:
         st.warning(
-            "Last run was **partial**: failed environments — "
-            + ", ".join(str(e) for e in meta.get("failed_environments", []))
-            + ". Check GitHub Actions logs or Trend Micro API role permissions."
+            "Last run was **partial** (container metrics OK; endpoint ASRM/inventory may need API permissions): "
+            + ", ".join(str(e) for e in partial_envs)
+        )
+    if failed_envs:
+        st.error(
+            "Last run **failed** for: "
+            + ", ".join(str(e) for e in failed_envs)
+            + ". Check GitHub Actions logs."
         )
     if meta.get("trigger"):
         st.caption(f"Last trigger: {meta.get('trigger')} · duration: {meta.get('duration_seconds', '—')}s")

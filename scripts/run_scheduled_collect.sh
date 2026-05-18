@@ -77,6 +77,13 @@ echo "USE_PASS=$USE_PASS DATA_DIR=$DATA_DIR trigger=$TRIGGER"
 
 SUCCEEDED_ENVS=()
 FAILED_ENVS=()
+PARTIAL_ENVS=()
+
+# In GitHub Actions, endpoint ASRM may lack permissions; do not fail the whole workflow.
+ENDPOINT_VULN_EXTRA=()
+if [[ "${COLLECTOR_NON_FATAL:-}" == "true" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+  ENDPOINT_VULN_EXTRA=(--non-fatal)
+fi
 
 for env in "${ENVIRONMENTS[@]}"; do
   echo "=== Environment: $env ==="
@@ -89,26 +96,39 @@ for env in "${ENVIRONMENTS[@]}"; do
   ) &
   PID2=$!
   (
-    "$BIN_DIR/get_endpoint_vulnerabilities" --environment "$env" --output-dir "$DATA_DIR" --quiet
+    "$BIN_DIR/get_endpoint_vulnerabilities" --environment "$env" --output-dir "$DATA_DIR" --quiet \
+      "${ENDPOINT_VULN_EXTRA[@]}"
   ) &
   PID3=$!
-  FAIL=0
-  wait "$PID1" || FAIL=1
-  wait "$PID2" || FAIL=1
-  wait "$PID3" || FAIL=1
-  if [[ "$FAIL" -ne 0 ]]; then
-    echo "WARNING: One or more collectors failed for environment $env (continuing with other environments)"
-    FAILED_ENVS+=("$env")
+  CONTAINER_OK=0
+  STATS_OK=0
+  VULN_OK=0
+  wait "$PID1" && CONTAINER_OK=1 || true
+  wait "$PID2" && STATS_OK=1 || true
+  wait "$PID3" && VULN_OK=1 || true
+
+  if [[ "$CONTAINER_OK" -eq 1 ]]; then
+    if [[ "$STATS_OK" -eq 1 && "$VULN_OK" -eq 1 ]]; then
+      SUCCEEDED_ENVS+=("$env")
+      echo "All collectors succeeded for $env"
+    else
+      PARTIAL_ENVS+=("$env")
+      echo "WARNING: Partial collection for $env (container=ok stats=$STATS_OK endpoint_vuln=$VULN_OK)"
+    fi
   else
-    SUCCEEDED_ENVS+=("$env")
+    echo "ERROR: Container collector failed for $env (required)"
+    FAILED_ENVS+=("$env")
   fi
 done
 
-if [[ ${#SUCCEEDED_ENVS[@]} -eq 0 ]]; then
+if [[ ${#SUCCEEDED_ENVS[@]} -eq 0 && ${#PARTIAL_ENVS[@]} -eq 0 ]]; then
   die "All environments failed: ${FAILED_ENVS[*]:-none}"
 fi
+if [[ ${#PARTIAL_ENVS[@]} -gt 0 ]]; then
+  echo "Partial collectors: ${PARTIAL_ENVS[*]} (container metrics collected; check ASRM API permissions for endpoints)"
+fi
 if [[ ${#FAILED_ENVS[@]} -gt 0 ]]; then
-  echo "Partial success: ok=[${SUCCEEDED_ENVS[*]}] failed=[${FAILED_ENVS[*]}]"
+  echo "Failed environments: ${FAILED_ENVS[*]}"
 fi
 
 END_TS=$(date +%s)
@@ -116,19 +136,22 @@ DURATION=$((END_TS - START_TS))
 
 export COLLECTION_TRIGGER="$TRIGGER"
 export COLLECTION_DURATION="$DURATION"
-export COLLECTION_ENV_LIST="${SUCCEEDED_ENVS[*]}"
+export COLLECTION_ENV_LIST="${SUCCEEDED_ENVS[*]} ${PARTIAL_ENVS[*]}"
 export COLLECTION_FAILED_ENV_LIST="${FAILED_ENVS[*]}"
+export COLLECTION_PARTIAL_ENV_LIST="${PARTIAL_ENVS[*]}"
 "$PYTHON" - <<'PY'
 import os
 from monitoring_dashboard.collection_schedule import write_meta_after_success
 
 envs = [e for e in os.environ.get("COLLECTION_ENV_LIST", "").split() if e]
 failed = [e for e in os.environ.get("COLLECTION_FAILED_ENV_LIST", "").split() if e]
+partial = [e for e in os.environ.get("COLLECTION_PARTIAL_ENV_LIST", "").split() if e]
 write_meta_after_success(
     environments=envs,
     duration_seconds=float(os.environ.get("COLLECTION_DURATION", "0")),
     trigger=os.environ.get("COLLECTION_TRIGGER", "local"),
     failed_environments=failed or None,
+    partial_environments=partial or None,
 )
 print("Wrote collection_meta.json")
 PY

@@ -75,8 +75,13 @@ func main() {
 	setupHelp := flag.Bool("setup-help", false, "Show setup instructions")
 	top := flag.Int("top", 100, "Max results per API page (default: 100)")
 	lookbackDays := flag.Int("lookback-days", 0, "Only include vulnerabilities from the last N days (0 = no date filter)")
+	nonFatal := flag.Bool("non-fatal", false, "Exit 0 when API role lacks device/vulnerability permissions (for CI)")
 
 	flag.Parse()
+
+	if *nonFatal || strings.EqualFold(os.Getenv("COLLECTOR_NON_FATAL"), "true") {
+		*nonFatal = true
+	}
 
 	if *setupHelp {
 		printSetupInstructions()
@@ -212,6 +217,13 @@ func main() {
 		fmt.Println("Run with --setup-help flag for detailed setup instructions:")
 		fmt.Println("  go run get_endpoint_vulnerabilities.go --setup-help")
 		fmt.Println()
+		if *nonFatal {
+			logger.Warn("Skipping endpoint vulnerability export (non-fatal mode)",
+				slog.String("event.outcome", "failure"),
+				slog.String("error.type", "insufficient_api_permissions"),
+			)
+			os.Exit(0)
+		}
 		os.Exit(1)
 	}
 

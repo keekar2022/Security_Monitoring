@@ -2,7 +2,21 @@
 
 Summary of changes, fixes, and implementation notes. Replaces WHATS_NEW, FIX_SUMMARY, VIEWER_DATA_DISPLAY_FIX, JSONL_DATA_FIX, CSV_LOADING_UPDATE, GO_BIN_COMMANDS_STATUS, and IMPLEMENTATION_SUMMARY.
 
-Dashboard release version is tracked in the root [`VERSION`](../VERSION) file (currently **1.1.3**). Platform / Go suite may use separate versioning in README.
+Dashboard release version is tracked in the root [`VERSION`](../VERSION) file (currently **1.1.4**). Platform / Go suite may use separate versioning in README.
+
+## [1.1.4] - 2026-05-18
+
+GitHub Actions collection resilient to missing ASRM API permissions
+
+### Changed
+
+- `get_endpoint_vulnerabilities`: `--non-fatal` / `COLLECTOR_NON_FATAL` exits 0 when device API permissions are missing.
+- `run_scheduled_collect.sh`: environment succeeds when container collector OK; partial vs failed tracked separately.
+- GHA workflow sets `COLLECTOR_NON_FATAL=true`; commit step runs after partial collection.
+
+### Fixed
+
+- Collect workflow failing on production ASRM permission errors despite successful container scans.
 
 ## [1.1.3] - 2026-05-18
 
