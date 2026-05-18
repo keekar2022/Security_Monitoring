@@ -2,7 +2,21 @@
 
 Summary of changes, fixes, and implementation notes. Replaces WHATS_NEW, FIX_SUMMARY, VIEWER_DATA_DISPLAY_FIX, JSONL_DATA_FIX, CSV_LOADING_UPDATE, GO_BIN_COMMANDS_STATUS, and IMPLEMENTATION_SUMMARY.
 
-Dashboard release version is tracked in the root [`VERSION`](../VERSION) file (currently **1.1.2**). Platform / Go suite may use separate versioning in README.
+Dashboard release version is tracked in the root [`VERSION`](../VERSION) file (currently **1.1.3**). Platform / Go suite may use separate versioning in README.
+
+## [1.1.3] - 2026-05-18
+
+Coloured tab navigation, Top 15 chart averaging, copy fix
+
+### Changed
+
+- Main dashboard navigation uses coloured section selector (Legacy, Container, Endpoint tabs).
+- Inner tabs styled with distinct shades via Streamlit `.stTabs` / baseweb CSS.
+- Top 15 clusters/devices chart shows **average** over last 4 collections, not cumulative totals.
+
+### Fixed
+
+- Legacy Trends label: **Monthly comparison (years overlay)**.
 
 ## [1.1.2] - 2026-05-18
 

@@ -128,6 +128,59 @@ def filter_dataframe(df: pd.DataFrame, term: str) -> pd.DataFrame:
     return df[mask]
 
 
+def recent_snapshot_times(df: pd.DataFrame, last_n: int = 4) -> list[pd.Timestamp]:
+    """Most recent collection timestamps in the dataset (newest first)."""
+    ts_col = get_timestamp_col(df)
+    if df.empty or not ts_col:
+        return []
+    times = pd.to_datetime(df[ts_col], errors="coerce", utc=True).dropna()
+    if times.empty:
+        return []
+    unique = sorted(times.unique(), reverse=True)
+    return list(unique[:last_n])
+
+
+def entity_metric_averages_last_snapshots(
+    df: pd.DataFrame,
+    data_type: str,
+    metric: str = "total",
+    *,
+    last_n_snapshots: int = 4,
+) -> dict[str, float]:
+    """
+    Per-entity mean metric across the last N collection runs (not cumulative).
+
+    Each snapshot contributes one value per entity; duplicates at the same timestamp
+    use the maximum value for that entity.
+    """
+    ts_col = get_timestamp_col(df)
+    if df.empty or not ts_col or last_n_snapshots < 1:
+        return {}
+
+    snapshots = recent_snapshot_times(df, last_n_snapshots)
+    if not snapshots:
+        return {}
+
+    ts_series = pd.to_datetime(df[ts_col], errors="coerce", utc=True)
+    recent = df.loc[ts_series.isin(snapshots)]
+    if recent.empty:
+        return {}
+
+    by_entity_ts: dict[str, dict[pd.Timestamp, float]] = {}
+    for _, row in recent.iterrows():
+        name = entity_name(row, data_type)
+        if not name:
+            continue
+        ts = pd.to_datetime(row[ts_col], errors="coerce", utc=True)
+        if pd.isna(ts):
+            continue
+        val = row_metric(row, data_type, metric)
+        bucket = by_entity_ts.setdefault(name, {})
+        bucket[ts] = max(bucket.get(ts, 0.0), val)
+
+    return {name: sum(vals.values()) / len(vals) for name, vals in by_entity_ts.items() if vals}
+
+
 def hero_stats(df: pd.DataFrame, data_type: str) -> dict[str, Any]:
     if df.empty:
         return {}

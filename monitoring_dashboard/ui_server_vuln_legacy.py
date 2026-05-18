@@ -134,6 +134,9 @@ def render_server_vuln_legacy_tab() -> None:
         key="view_legacy",
     )
 
+    from monitoring_dashboard.ui_theme import inject_subtab_styles
+
+    inject_subtab_styles()
     sub_over, sub_trend, sub_env, sub_data, sub_upload = st.tabs(
         ["Overview", "Trends", "By environment", "Data", "Upload"]
     )
@@ -516,7 +519,7 @@ def _render_weekly_trends(df: pd.DataFrame, view_mode: str) -> None:
         _chart_weekly_metric(df, "sa_per_server")
 
     st.divider()
-    st.markdown("**Monthly comparison (year overlay)**")
+    st.markdown("**Monthly comparison (years overlay)**")
     monthly = monthly_per_server_all_years(df)
     if monthly.empty:
         st.caption("No monthly per-server data.")

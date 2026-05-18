@@ -16,18 +16,26 @@ from monitoring_dashboard.data_loader import load_jsonl
 from monitoring_dashboard.metrics import (
     SEVERITY_COLORS,
     TAB_META,
+    entity_metric_averages_last_snapshots,
     entity_name,
     environment_name,
     filter_dataframe,
     get_timestamp_col,
     hero_stats,
     row_metric,
+    recent_snapshot_times,
 )
 from monitoring_dashboard.app_meta import APP_TITLE
 from monitoring_dashboard.ui_server_vuln_legacy import render_server_vuln_legacy_tab
-from monitoring_dashboard.ui_theme import PLOTLY_LAYOUT
+from monitoring_dashboard.ui_theme import PLOTLY_LAYOUT, inject_main_nav_styles
 
 TAB_ORDER = ["container", "endpointVuln", "endpoint"]
+MAIN_NAV_LABELS = (
+    "Server Vulnerabilities-Legacy Tool",
+    "Container Vulnerabilities",
+    "Endpoint Vulnerabilities",
+    "Endpoint Inventory",
+)
 
 
 def render_dashboard() -> None:
@@ -43,19 +51,23 @@ def render_dashboard() -> None:
     else:
         st.caption("Trend Micro Vision One — OpenTelemetry metrics · No collection metadata yet")
 
-    tabs = st.tabs(
-        [
-            "Server Vulnerabilities-Legacy Tool",
-            "Container Vulnerabilities",
-            "Endpoint Vulnerabilities",
-            "Endpoint Inventory",
-        ]
+    inject_main_nav_styles()
+    section = st.radio(
+        "Dashboard section",
+        list(MAIN_NAV_LABELS),
+        horizontal=True,
+        label_visibility="collapsed",
+        key="main_dashboard_nav",
     )
-    with tabs[0]:
+
+    if section == MAIN_NAV_LABELS[0]:
         render_server_vuln_legacy_tab()
-    for tab, data_type in zip(tabs[1:], TAB_ORDER):
-        with tab:
-            _render_dataset_tab(data_type)
+    elif section == MAIN_NAV_LABELS[1]:
+        _render_dataset_tab("container")
+    elif section == MAIN_NAV_LABELS[2]:
+        _render_dataset_tab("endpointVuln")
+    else:
+        _render_dataset_tab("endpoint")
 
 
 def _render_dataset_tab(data_type: str) -> None:
@@ -87,6 +99,9 @@ def _render_dataset_tab(data_type: str) -> None:
     st.caption(f"Showing {len(df)} record(s)")
     view_mode = st.radio("View charts as", ["Chart", "Table", "Both"], horizontal=True, key=f"view_{data_type}")
 
+    from monitoring_dashboard.ui_theme import inject_subtab_styles
+
+    inject_subtab_styles()
     sub_over, sub_trend, sub_env, sub_data = st.tabs(["Overview", "Trends", "By environment", "Data"])
 
     with sub_over:
@@ -172,28 +187,32 @@ def _chart_severity(df: pd.DataFrame, data_type: str) -> None:
     st.plotly_chart(fig, use_container_width=True)
 
 
-def _chart_top_entities(df: pd.DataFrame, data_type: str, limit: int = 15) -> None:
+def _chart_top_entities(df: pd.DataFrame, data_type: str, limit: int = 15, last_n_snapshots: int = 4) -> None:
     if df.empty:
         return
-    totals: dict[str, float] = {}
-    for _, row in df.iterrows():
-        name = entity_name(row, data_type)
-        if not name:
-            continue
-        totals[name] = totals.get(name, 0) + row_metric(row, data_type, "total")
-    sorted_items = sorted(totals.items(), key=lambda x: x[1], reverse=True)[:limit]
+    averages = entity_metric_averages_last_snapshots(
+        df, data_type, "total", last_n_snapshots=last_n_snapshots
+    )
+    sorted_items = sorted(averages.items(), key=lambda x: x[1], reverse=True)[:limit]
     if not sorted_items:
         st.caption("No entities to chart.")
         return
     names = [x[0] for x in reversed(sorted_items)]
     vals = [x[1] for x in reversed(sorted_items)]
+    snap_count = len(recent_snapshot_times(df, last_n_snapshots))
+    snap_note = f"last {snap_count} collection{'s' if snap_count != 1 else ''}"
     fig = go.Figure(go.Bar(x=vals, y=names, orientation="h", marker_color="#059669"))
     fig.update_layout(
-        title=f"Top {limit} {TAB_META[data_type]['entityLabel']}",
+        title=f"Top {limit} {TAB_META[data_type]['entityLabel']} (avg, {snap_note})",
         height=420,
         **PLOTLY_LAYOUT,
     )
+    fig.update_xaxes(rangemode="tozero")
     st.plotly_chart(fig, use_container_width=True)
+    st.caption(
+        f"Bars show the **average** vulnerability total across the {snap_note} "
+        f"(~one month if collected weekly), not cumulative history."
+    )
 
 
 def _chart_risk_hist(df: pd.DataFrame, data_type: str) -> None:
