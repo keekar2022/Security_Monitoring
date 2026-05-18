@@ -98,11 +98,26 @@ def entity_name(row: pd.Series, data_type: str) -> str | None:
     return row.get("endpoint.name")
 
 
+# Canonical labels for dashboard charts (merge legacy/alternate collector names).
+_ENVIRONMENT_CANONICAL = {
+    "quality & test": "AMS QTE",
+    "quality and test": "AMS QTE",
+}
+
+
+def normalize_environment_name(name: str) -> str:
+    """Map alternate Trend Micro environment labels to one dashboard bar."""
+    text = (name or "").strip()
+    if not text:
+        return "Unknown"
+    return _ENVIRONMENT_CANONICAL.get(text.lower(), text)
+
+
 def environment_name(row: pd.Series) -> str:
     for k in ("Resource.deployment.environment", "deployment.environment"):
         v = row.get(k)
         if isinstance(v, str) and v.strip():
-            return v.strip()
+            return normalize_environment_name(v)
     return "Unknown"
 
 

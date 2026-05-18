@@ -143,6 +143,16 @@ def is_oidc_configured() -> bool:
     return bool(domain and client_id and secret)
 
 
+def okta_loaded_from_env() -> bool:
+    """True when OKTA_* env vars (or Streamlit Secrets) supply the OIDC client."""
+    domain = (os.environ.get("OKTA_DOMAIN") or "").strip()
+    client_id = (os.environ.get("OKTA_CLIENT_ID") or "").strip()
+    secret = (os.environ.get("OKTA_CLIENT_SECRET") or "").strip()
+    if _is_placeholder(domain) or _is_placeholder(client_id) or _is_placeholder(secret):
+        return False
+    return bool(domain and client_id and secret)
+
+
 def config_for_display() -> dict[str, Any]:
     """Return config safe for UI (masked secret)."""
     cfg = load_config()

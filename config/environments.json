@@ -41,7 +41,7 @@
     },
     "quality_test": {
       "name": "Quality & Test - Adobe Managed Services QTE",
-      "environment_label": "Quality & Test",
+      "environment_label": "AMS QTE",
       "region": "au",
       "region_name": "Australia",
       "api_base_url": "https://api.au.xdr.trendmicro.com",

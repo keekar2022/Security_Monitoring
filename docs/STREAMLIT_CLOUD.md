@@ -46,6 +46,33 @@ source .venv/bin/activate
 streamlit deploy app.py
 ```
 
+## Okta OIDC persistence (important)
+
+**Why settings disappear after reboot:** The Settings UI saves Okta to `config/auth_config.json` on the container disk. Streamlit Community Cloud uses an **ephemeral filesystem** — that file is **deleted on every app restart or redeploy**.
+
+**What to do:** Store Okta in **App settings → Secrets** (not only via the Settings form). The app reads `OKTA_*` from Secrets on every startup (`monitoring_dashboard/secrets_loader.py`).
+
+1. Open your app on [share.streamlit.io](https://share.streamlit.io/) → **Manage app** → **Settings** → **Secrets**.
+2. Paste (replace placeholders) — match [`.streamlit/secrets.toml.example`](../.streamlit/secrets.toml.example):
+
+```toml
+OKTA_DOMAIN = "your-org.okta.com"
+OKTA_CLIENT_ID = "your_client_id"
+OKTA_CLIENT_SECRET = "your_client_secret"
+OKTA_AUTH_SERVER_ID = "default"
+OKTA_SCOPE = "openid profile email"
+OKTA_REDIRECT_URI = "https://YOUR-APP-NAME.streamlit.app/"
+STREAMLIT_APP_URL = "https://YOUR-APP-NAME.streamlit.app/"
+```
+
+3. **Save** Secrets and **Reboot** the app. In **Platform settings → SSO Integration**, you should see a green banner: *loaded from environment / Streamlit Secrets*.
+
+4. Register the same **callback URL** in your Okta OIDC app (trailing slash must match).
+
+**Local laptop (not Cloud):** Either keep using **Save configuration** (`config/auth_config.json`, gitignored), or copy secrets to `.streamlit/secrets.toml` (also gitignored) for the same persistence model.
+
+---
+
 ## Secrets (App settings → Secrets)
 
 Copy from [`.streamlit/secrets.toml.example`](../.streamlit/secrets.toml.example):

@@ -11,8 +11,10 @@ from monitoring_dashboard.async_utils import run_async
 from monitoring_dashboard.auth_config import (
     MASKED_SECRET,
     config_for_display,
+    config_path,
     is_oidc_configured,
     load_config,
+    okta_loaded_from_env,
     save_config,
 )
 from monitoring_dashboard.bootstrap_auth import is_settings_authenticated, settings_logout
@@ -40,12 +42,36 @@ def render_settings_page(*, allow_when_configured: bool = False) -> None:
         render_collection_tab()
 
 
+def _render_okta_persistence_help() -> None:
+    """Explain where OIDC settings must live so they survive Streamlit reboots."""
+    if okta_loaded_from_env():
+        st.success(
+            "Okta is loaded from **environment / Streamlit Secrets** (`OKTA_*`). "
+            "These settings persist across app reboots."
+        )
+        return
+    path = config_path()
+    if path.is_file():
+        st.info(
+            f"Okta is loaded from **`{path.relative_to(path.parent.parent)}`** (saved via this form). "
+            "On your laptop this file survives restarts. "
+            "On **Streamlit Community Cloud** the disk is wiped on reboot — use **Secrets** instead (see below)."
+        )
+    else:
+        st.warning(
+            "Nothing saved yet. **Save configuration** writes `config/auth_config.json` locally. "
+            "On **Streamlit Community Cloud**, that file is **lost on every reboot** — "
+            "put `OKTA_*` in **App settings → Secrets** (see `docs/STREAMLIT_CLOUD.md`)."
+        )
+
+
 def _render_sso_tab() -> None:
     cfg = config_for_display()
     oauth = cfg.get("oauth", {})
     okta = dict(oauth.get("providers", {}).get("okta", {}))
 
     st.markdown("### Okta OIDC")
+    _render_okta_persistence_help()
     st.caption(
         "Configure **Authorization Code + PKCE** sign-in. "
         "Register the callback URL in Okta exactly as shown below."
