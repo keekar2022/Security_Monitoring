@@ -9,6 +9,8 @@ Usage:
     ~/Downloads/2022-AEMGovAu-Vulnerability-Scanning-Report.csv \\
     ... \\
     ~/Downloads/2026-AEMGovAu-Vulnerability-Scanning-Report.csv
+
+See docs/AEM_GOVAU_LEGACY_DASHBOARD.md (release 1.0.11).
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ sys.path.insert(0, str(ROOT))
 from monitoring_dashboard.server_vuln_legacy.aem_report_parser import (  # noqa: E402
     merge_weekly_records,
     parse_aem_report_file,
+    predicted_data_cutoff,
     validate_container_counts,
 )
 from monitoring_dashboard.server_vuln_legacy.store import (  # noqa: E402
@@ -93,6 +96,7 @@ def main() -> int:
         "import_upload_id": UPLOAD_ID,
         "source_files": [name for name, _ in file_rows],
         "rows_with_container_metrics": with_container,
+        "predicted_data_cutoff": predicted_data_cutoff().isoformat(),
     }
     save_store_meta(meta)
 

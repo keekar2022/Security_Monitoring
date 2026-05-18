@@ -11,6 +11,8 @@ Run locally:
 
 Deploy (Streamlit Community Cloud): push branch main or Development to
   https://github.com/keekar2022/Security_Monitoring — main file app.py
+
+Docs: docs/AEM_GOVAU_LEGACY_DASHBOARD.md (v1.0.11 legacy tab + Splunk upload)
 """
 
 from __future__ import annotations

@@ -3,1348 +3,1271 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vulnerabilities &amp; Inventory Viewer - Trend Micro Analytics</title>
+    <title>Vulnerabilities &amp; Inventory Dashboard - Trend Micro</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary: #059669;
+            --primary-dark: #047857;
+            --primary-light: #ecfdf5;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --panel-bg: #fafafa;
+            --critical: #dc3545;
+            --high: #fd7e14;
+            --medium: #ffc107;
+            --low: #28a745;
+            --tab-tech: #2563eb;
+            --tab-tech-bg: #eff6ff;
+            --tab-pat: #d97706;
+            --tab-pat-bg: #fffbeb;
         }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            color: var(--text);
             min-height: 100vh;
+            line-height: 1.5;
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
+        .app { max-width: 1440px; margin: 0 auto; padding: 1rem 1.25rem 2rem; }
+
+        .header { margin-bottom: 1rem; }
+        .header h1 { font-size: 1.75rem; font-weight: 700; color: var(--text); }
+        .header .caption { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.25rem; }
+
+        .info-panel {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.65rem 1rem;
+            margin: 0.75rem 0 1rem;
+            background: var(--primary-light);
+            font-size: 0.82rem;
+            color: #334155;
+        }
+        .info-panel code {
+            background: rgba(5, 150, 105, 0.12);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
         }
 
-        .header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .tabs {
+        /* Main section tabs — stock-dashboard pattern */
+        .main-tabs { margin-top: 0.5rem; }
+        .main-tabs .tab-list {
             display: flex;
-            background: #f5f5f5;
-            border-bottom: 2px solid #ddd;
-            padding: 0;
-            overflow-x: auto;
+            gap: 0.5rem;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.35rem;
+            flex-wrap: wrap;
         }
-
-        .tab-button {
-            padding: 15px 30px;
-            background: none;
-            border: none;
+        .main-tabs .tab-btn {
+            border-radius: 8px 8px 0 0;
+            border: 1px solid #cbd5e1;
+            padding: 0.6rem 1.1rem;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            color: #555;
-            transition: all 0.3s ease;
-            border-bottom: 3px solid transparent;
-            white-space: nowrap;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-size: 0.95rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+            transition: filter 0.15s, background 0.15s;
+        }
+        .main-tabs .tab-btn:hover { filter: brightness(0.97); border-color: #94a3b8; }
+        .main-tabs .tab-btn.active[data-tab="container"] {
+            background: var(--primary); color: #fff; border-color: var(--primary-dark);
+        }
+        .main-tabs .tab-btn[data-tab="endpoint"]:not(.active) {
+            background: var(--tab-tech-bg); color: #1d4ed8;
+        }
+        .main-tabs .tab-btn.active[data-tab="endpoint"] {
+            background: var(--tab-tech); color: #fff; border-color: #1d4ed8;
+        }
+        .main-tabs .tab-btn[data-tab="endpointVuln"]:not(.active) {
+            background: var(--tab-pat-bg); color: #b45309;
+        }
+        .main-tabs .tab-btn.active[data-tab="endpointVuln"] {
+            background: var(--tab-pat); color: #fff; border-color: #b45309;
         }
 
-        .tab-button:hover {
-            background: #e8e8e8;
-            color: #2a5298;
-        }
-
-        .tab-button.active {
-            background: white;
-            color: #2a5298;
-            border-bottom: 3px solid #2a5298;
-        }
-
-        .tab-content {
+        .tab-panel {
             display: none;
-            padding: 20px 24px;
-            animation: fadeIn 0.3s ease;
-            flex-direction: column;
-            min-height: 0;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
+            border-radius: 0 0 10px 10px;
+            padding: 1rem;
+            animation: fadeIn 0.25s ease;
         }
-
-        .tab-content.active {
-            display: flex;
-        }
+        .tab-panel.active { display: block; }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .controls {
+        /* Sub-tabs (horizon-style) */
+        .sub-tabs { margin: 0.75rem 0; }
+        .sub-tabs .sub-tab-list {
             display: flex;
-            gap: 12px;
-            margin-bottom: 12px;
+            gap: 0.35rem;
             flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+        .sub-tabs .sub-tab-btn {
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            padding: 0.45rem 0.85rem;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            background: #f1f5f9;
+            color: #334155;
+        }
+        .sub-tabs .sub-tab-btn:hover { border-color: #94a3b8; }
+        .sub-tabs .sub-tab-btn.active {
+            background: #475569; color: #fff; border-color: #334155;
+        }
+        .sub-panel { display: none; }
+        .sub-panel.active { display: block; }
+
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
             align-items: center;
+            margin-bottom: 0.75rem;
         }
-
-        .search-box {
+        .toolbar .search-box {
             flex: 1;
-            min-width: 250px;
-            padding: 12px 20px;
-            border: 2px solid #ddd;
+            min-width: 200px;
+            padding: 0.5rem 0.85rem;
+            border: 1px solid var(--border);
             border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
+            font-size: 0.9rem;
         }
-
-        .search-box:focus {
+        .toolbar .search-box:focus {
             outline: none;
-            border-color: #2a5298;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
         }
 
         .btn {
-            padding: 12px 24px;
-            background: #2a5298;
+            padding: 0.5rem 1rem;
+            background: var(--primary);
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 0.875rem;
             font-weight: 500;
-            transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
+        .btn:hover { background: var(--primary-dark); }
+        .btn-secondary { background: #64748b; }
+        .btn-secondary:hover { background: #475569; }
 
-        .btn:hover {
-            background: #1e3c72;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(42, 82, 152, 0.3);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-        }
-
-        .btn-secondary:hover {
-            background: #545b62;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 10px 14px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-card h3 {
-            font-size: 11px;
-            opacity: 0.95;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .stat-card .value {
-            font-size: 20px;
-            font-weight: bold;
-        }
-
-        .data-view-toggle {
+        .refresh-row {
             display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .refresh-row .last-updated {
+            font-size: 0.82rem;
+            color: var(--text-muted);
         }
 
-        .view-btn {
-            padding: 8px 16px;
-            background: #f0f0f0;
-            border: 2px solid #ddd;
+        /* Quote hero — bordered metric strip */
+        .quote-hero {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            background: #fff;
+            margin-bottom: 1rem;
+        }
+        .quote-hero .symbol-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 0.15rem;
+        }
+        .quote-hero .symbol-caption {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+        .metric-card .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .metric-card .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: var(--text);
+        }
+        .metric-card .metric-delta {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .view-mode {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .view-mode label { font-size: 0.875rem; font-weight: 500; color: #334155; }
+        .view-mode .radio-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .view-mode .radio-opt {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            border: 1px solid var(--border);
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            background: #fff;
+        }
+        .view-mode .radio-opt:has(input:checked) {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-weight: 600;
         }
 
-        .view-btn.active {
-            background: #2a5298;
-            color: white;
-            border-color: #2a5298;
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin: 0.5rem 0 0.35rem;
+        }
+
+        details.chart-expander {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            background: #fff;
+            overflow: hidden;
+        }
+        details.chart-expander summary {
+            padding: 0.65rem 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--primary-dark);
+            cursor: pointer;
+            list-style: none;
+            user-select: none;
+        }
+        details.chart-expander summary::-webkit-details-marker { display: none; }
+        details.chart-expander summary::before {
+            content: '▸ ';
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        details.chart-expander[open] summary::before { transform: rotate(90deg); }
+        details.chart-expander .expander-body { padding: 0 1rem 1rem; }
+
+        .chart-box {
+            width: 100%;
+            min-height: 380px;
+            height: 420px;
+        }
+        .chart-box.chart-sm { min-height: 300px; height: 320px; }
+
+        .record-count {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
         }
 
         .table-container {
             overflow-x: auto;
             border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+            background: #fff;
         }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
         th {
-            background: #2a5298;
+            background: var(--primary-dark);
             color: white;
-            padding: 12px;
+            padding: 0.65rem 0.75rem;
             text-align: left;
             font-weight: 600;
             position: sticky;
             top: 0;
-            z-index: 10;
         }
-
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }
-
-        tr:hover {
-            background: #f9f9f9;
-        }
+        td { padding: 0.65rem 0.75rem; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f8fafc; }
 
         .json-view {
             background: #1e1e1e;
             color: #d4d4d4;
-            padding: 20px;
+            padding: 1rem;
             border-radius: 8px;
-            overflow-x: auto;
             font-family: 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.6;
-            max-height: 600px;
-            overflow-y: auto;
+            font-size: 0.8rem;
+            max-height: 500px;
+            overflow: auto;
         }
-
-        .json-key {
-            color: #9cdcfe;
-        }
-
-        .json-string {
-            color: #ce9178;
-        }
-
-        .json-number {
-            color: #b5cea8;
-        }
-
-        .json-boolean {
-            color: #569cd6;
-        }
-
-        .json-null {
-            color: #569cd6;
-        }
-
-        .chart-container {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 8px;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px;
-            color: #666;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #2a5298;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 60px;
-            color: #999;
-            font-size: 18px;
-        }
-
-        .record-count {
-            color: #666;
-            font-size: 13px;
-            margin-bottom: 10px;
-        }
+        .json-key { color: #9cdcfe; }
+        .json-string { color: #ce9178; }
+        .json-number { color: #b5cea8; }
+        .json-boolean { color: #569cd6; }
+        .json-null { color: #569cd6; }
 
         .alert {
-            padding: 15px 20px;
-            margin-bottom: 20px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            font-size: 0.875rem;
         }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border-left: 4px solid #17a2b8;
-        }
-
         .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-            border-left: 4px solid #ffc107;
+            background: #fffbeb;
+            color: #92400e;
+            border-left: 4px solid #f59e0b;
+        }
+        .alert-info {
+            background: #ecfdf5;
+            color: #065f46;
+            border-left: 4px solid var(--primary);
         }
 
         .badge {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
             font-weight: 600;
-            text-transform: uppercase;
+        }
+        .badge-critical { background: var(--critical); color: white; }
+        .badge-high { background: var(--high); color: white; }
+        .badge-medium { background: var(--medium); color: #333; }
+        .badge-low { background: var(--low); color: white; }
+
+        .chart-controls {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .chart-select {
+            padding: 0.4rem 0.65rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            min-width: 180px;
         }
 
-        .badge-critical {
-            background: #dc3545;
-            color: white;
-        }
-
-        .badge-high {
-            background: #fd7e14;
-            color: white;
-        }
-
-        .badge-medium {
-            background: #ffc107;
-            color: #333;
-        }
-
-        .badge-low {
-            background: #28a745;
-            color: white;
+        .no-data {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--text-muted);
         }
 
         .footer {
             text-align: center;
-            padding: 20px;
-            background: #f5f5f5;
-            color: #666;
-            font-size: 14px;
+            padding: 1.25rem 0 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            margin-top: 1.5rem;
         }
+        .footer a { color: var(--primary); }
 
-        .chart-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 400px;
-        }
-
-        .chart-container-wrapper {
-            background: white;
-            padding: 16px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
-
-        .chart-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-            flex-shrink: 0;
-        }
-
-        .chart-select {
-            padding: 8px 12px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            min-width: 180px;
-        }
-
-        #container-chart, #endpoint-chart, #endpointVuln-chart {
-            width: 100%;
-            flex: 1;
-            min-height: 60vh;
-            height: 60vh;
-        }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📊 Vulnerabilities &amp; Inventory Viewer</h1>
-            <p>Trend Micro Vision One - OpenTelemetry Metrics Visualization</p>
-            <div class="alert alert-info" style="margin-top: 20px; background: rgba(255,255,255,0.2); color: white; border-left-color: white;">
-                💡 <strong>Tip:</strong> For best results, serve this page via local web server to avoid CORS issues:<br>
-                <code id="server-command" style="background: rgba(0,0,0,0.3); padding: 6px 12px; border-radius: 4px; display: inline-block; margin-top: 8px;">
-                    cd &lt;path-to-this-folder&gt; && python3 -m http.server 8080
-                </code><br>
-                <span style="font-size: 0.9em; margin-top: 6px; display: inline-block;">Then open: 
-                <code style="background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 4px;">http://localhost:8080/jsonl_viewer.html</code></span>
+    <div class="app">
+        <header class="header">
+            <h1>Vulnerabilities &amp; Inventory Dashboard</h1>
+            <p class="caption">Trend Micro Vision One — OpenTelemetry metrics (layout inspired by Keekar's Stocks Status Dashboard)</p>
+            <div class="info-panel" id="server-hint">
+                Serve this folder: <code id="server-command">cd data && python3 -m http.server 8080</code>
+                → <code>http://localhost:8080/jsonl_viewer.html</code>
             </div>
-        </div>
+        </header>
 
-        <div class="tabs">
-            <button class="tab-button active" onclick="switchTab('container')">
-                Container Vulnerabilities
-            </button>
-            <button class="tab-button" onclick="switchTab('endpoint')">
-                Endpoint Inventory
-            </button>
-            <button class="tab-button" onclick="switchTab('endpointVuln')">
-                Endpoint Vulnerabilities
-            </button>
-        </div>
-
-        <!-- Container Vulnerabilities Tab -->
-        <div id="container-tab" class="tab-content active">
-            <div class="controls">
-                <input type="text" id="container-search" class="search-box" placeholder="Search in container data..." onkeyup="filterData('container')">
-                <label class="btn" style="cursor: pointer;">
-                    📁 Upload JSONL
-                    <input type="file" id="container-upload" accept=".jsonl,.json" style="display: none;" onchange="handleFileUpload('container', event)">
-                </label>
-                <button class="btn" onclick="loadJSONL('container')">
-                    🔄 Reload from File
-                </button>
-                <button class="btn btn-secondary" onclick="exportData('container')">
-                    💾 Export JSON
-                </button>
+        <div class="main-tabs">
+            <div class="tab-list" role="tablist">
+                <button type="button" class="tab-btn active" data-tab="container" role="tab" aria-selected="true">Container Vulnerabilities</button>
+                <button type="button" class="tab-btn" data-tab="endpointVuln" role="tab">Endpoint Vulnerabilities</button>
+                <button type="button" class="tab-btn" data-tab="endpoint" role="tab">Endpoint Inventory</button>
             </div>
 
-            <div class="stats-grid" id="container-stats"></div>
-
-            <div class="data-view-toggle">
-                <button class="view-btn" onclick="switchView('container', 'table')">📋 Table View</button>
-                <button class="view-btn active" onclick="switchView('container', 'chart')">📊 Chart View</button>
-                <button class="view-btn" onclick="switchView('container', 'json')">📝 JSON View</button>
-            </div>
-
-            <div class="record-count" id="container-count"></div>
-            <div id="container-table-view" class="table-container" style="display: none;"></div>
-            <div id="container-chart-view" class="chart-area">
-                <div class="chart-controls">
-                    <select id="container-chart-metric" class="chart-select" onchange="renderChart('container')">
-                        <option value="total">Total Vulnerabilities</option>
-                        <option value="critical">Critical Vulnerabilities</option>
-                        <option value="high">High Vulnerabilities</option>
-                        <option value="medium">Medium Vulnerabilities</option>
-                        <option value="low">Low Vulnerabilities</option>
-                        <option value="risk_score">Risk Score</option>
-                    </select>
-                    <label style="display: flex; align-items: center; gap: 8px; padding: 10px;">
-                        <input type="checkbox" id="container-show-all" checked onchange="renderChart('container')">
-                        <span>Show All Clusters/Groups</span>
-                    </label>
+            <!-- Container tab -->
+            <div id="container-tab" class="tab-panel active" role="tabpanel">
+                <div class="toolbar">
+                    <input type="text" id="container-search" class="search-box" placeholder="Filter clusters, environments…" onkeyup="filterData('container')">
+                    <label class="btn" style="cursor:pointer">📁 Upload<input type="file" id="container-upload" accept=".jsonl,.json" hidden onchange="handleFileUpload('container', event)"></label>
+                    <button type="button" class="btn" onclick="loadJSONL('container')">🔄 Reload</button>
+                    <button type="button" class="btn btn-secondary" onclick="exportData('container')">💾 Export</button>
                 </div>
-                <div class="chart-container-wrapper">
-                    <div id="container-chart"></div>
+                <div class="refresh-row">
+                    <span class="last-updated" id="container-last-updated"></span>
+                    <button type="button" class="btn" onclick="loadJSONL('container')">Refresh data</button>
+                </div>
+                <div id="container-hero" class="quote-hero"></div>
+                <div class="view-mode">
+                    <label>View charts as</label>
+                    <div class="radio-group" id="container-view-mode">
+                        <label class="radio-opt"><input type="radio" name="container-display" value="chart" checked onchange="setDisplayMode('container')"> Chart</label>
+                        <label class="radio-opt"><input type="radio" name="container-display" value="table" onchange="setDisplayMode('container')"> Table</label>
+                        <label class="radio-opt"><input type="radio" name="container-display" value="both" onchange="setDisplayMode('container')"> Both</label>
+                    </div>
+                </div>
+                <p class="record-count" id="container-count"></p>
+                <div class="sub-tabs" data-type="container">
+                    <div class="sub-tab-list">
+                        <button type="button" class="sub-tab-btn active" data-sub="overview">Overview</button>
+                        <button type="button" class="sub-tab-btn" data-sub="trends">Trends</button>
+                        <button type="button" class="sub-tab-btn" data-sub="environment">By environment</button>
+                        <button type="button" class="sub-tab-btn" data-sub="data">Data</button>
+                    </div>
+                    <div id="container-sub-overview" class="sub-panel active"></div>
+                    <div id="container-sub-trends" class="sub-panel"></div>
+                    <div id="container-sub-environment" class="sub-panel"></div>
+                    <div id="container-sub-data" class="sub-panel">
+                        <div id="container-table-view" class="table-container hidden"></div>
+                        <div id="container-json-view" class="json-view hidden"></div>
+                    </div>
                 </div>
             </div>
-            <div id="container-json-view" class="json-view" style="display: none;"></div>
-        </div>
 
-        <!-- Endpoint Inventory Tab -->
-        <div id="endpoint-tab" class="tab-content">
-            <div class="controls">
-                <input type="text" id="endpoint-search" class="search-box" placeholder="Search in endpoint data..." onkeyup="filterData('endpoint')">
-                <label class="btn" style="cursor: pointer;">
-                    📁 Upload JSONL
-                    <input type="file" id="endpoint-upload" accept=".jsonl,.json" style="display: none;" onchange="handleFileUpload('endpoint', event)">
-                </label>
-                <button class="btn" onclick="loadJSONL('endpoint')">
-                    🔄 Reload from File
-                </button>
-                <button class="btn btn-secondary" onclick="exportData('endpoint')">
-                    💾 Export JSON
-                </button>
-            </div>
-
-            <div class="stats-grid" id="endpoint-stats"></div>
-
-            <div class="data-view-toggle">
-                <button class="view-btn" onclick="switchView('endpoint', 'table')">📋 Table View</button>
-                <button class="view-btn active" onclick="switchView('endpoint', 'chart')">📊 Chart View</button>
-                <button class="view-btn" onclick="switchView('endpoint', 'json')">📝 JSON View</button>
-            </div>
-
-            <div class="record-count" id="endpoint-count"></div>
-            <div id="endpoint-table-view" class="table-container" style="display: none;"></div>
-            <div id="endpoint-chart-view" class="chart-area">
-                <div class="chart-controls">
-                    <select id="endpoint-chart-metric" class="chart-select" onchange="renderChart('endpoint')">
-                        <option value="total">Total Detections</option>
-                        <option value="critical">Critical Detections</option>
-                        <option value="high">High Detections</option>
-                        <option value="medium">Medium Detections</option>
-                        <option value="low">Low Detections</option>
-                        <option value="risk_score">Risk Score</option>
-                    </select>
-                    <label style="display: flex; align-items: center; gap: 8px; padding: 10px;">
-                        <input type="checkbox" id="endpoint-show-all" checked onchange="renderChart('endpoint')">
-                        <span>Show All Endpoints</span>
-                    </label>
+            <!-- Endpoint vulnerabilities tab -->
+            <div id="endpointVuln-tab" class="tab-panel" role="tabpanel">
+                <div class="toolbar">
+                    <input type="text" id="endpointVuln-search" class="search-box" placeholder="Filter devices…" onkeyup="filterData('endpointVuln')">
+                    <label class="btn" style="cursor:pointer">📁 Upload<input type="file" id="endpointVuln-upload" accept=".jsonl,.json" hidden onchange="handleFileUpload('endpointVuln', event)"></label>
+                    <button type="button" class="btn" onclick="loadJSONL('endpointVuln')">🔄 Reload</button>
+                    <button type="button" class="btn btn-secondary" onclick="exportData('endpointVuln')">💾 Export</button>
                 </div>
-                <div class="chart-container-wrapper">
-                    <div id="endpoint-chart"></div>
+                <div class="refresh-row">
+                    <span class="last-updated" id="endpointVuln-last-updated"></span>
+                    <button type="button" class="btn" onclick="loadJSONL('endpointVuln')">Refresh data</button>
+                </div>
+                <div id="endpointVuln-hero" class="quote-hero"></div>
+                <div class="view-mode">
+                    <label>View charts as</label>
+                    <div class="radio-group">
+                        <label class="radio-opt"><input type="radio" name="endpointVuln-display" value="chart" checked onchange="setDisplayMode('endpointVuln')"> Chart</label>
+                        <label class="radio-opt"><input type="radio" name="endpointVuln-display" value="table" onchange="setDisplayMode('endpointVuln')"> Table</label>
+                        <label class="radio-opt"><input type="radio" name="endpointVuln-display" value="both" onchange="setDisplayMode('endpointVuln')"> Both</label>
+                    </div>
+                </div>
+                <p class="record-count" id="endpointVuln-count"></p>
+                <div class="sub-tabs" data-type="endpointVuln">
+                    <div class="sub-tab-list">
+                        <button type="button" class="sub-tab-btn active" data-sub="overview">Overview</button>
+                        <button type="button" class="sub-tab-btn" data-sub="trends">Trends</button>
+                        <button type="button" class="sub-tab-btn" data-sub="environment">By environment</button>
+                        <button type="button" class="sub-tab-btn" data-sub="data">Data</button>
+                    </div>
+                    <div id="endpointVuln-sub-overview" class="sub-panel active"></div>
+                    <div id="endpointVuln-sub-trends" class="sub-panel"></div>
+                    <div id="endpointVuln-sub-environment" class="sub-panel"></div>
+                    <div id="endpointVuln-sub-data" class="sub-panel">
+                        <div id="endpointVuln-table-view" class="table-container hidden"></div>
+                        <div id="endpointVuln-json-view" class="json-view hidden"></div>
+                    </div>
                 </div>
             </div>
-            <div id="endpoint-json-view" class="json-view" style="display: none;"></div>
-        </div>
-
-        <!-- Endpoint Vulnerabilities Tab -->
-        <div id="endpointVuln-tab" class="tab-content">
-            <div class="controls">
-                <input type="text" id="endpointVuln-search" class="search-box" placeholder="Search in endpoint vulnerability data..." onkeyup="filterData('endpointVuln')">
-                <label class="btn" style="cursor: pointer;">
-                    📁 Upload JSONL
-                    <input type="file" id="endpointVuln-upload" accept=".jsonl,.json" style="display: none;" onchange="handleFileUpload('endpointVuln', event)">
-                </label>
-                <button class="btn" onclick="loadJSONL('endpointVuln')">
-                    🔄 Reload from File
-                </button>
-                <button class="btn btn-secondary" onclick="exportData('endpointVuln')">
-                    💾 Export JSON
-                </button>
-            </div>
-
-            <div class="stats-grid" id="endpointVuln-stats"></div>
-
-            <div class="data-view-toggle">
-                <button class="view-btn" onclick="switchView('endpointVuln', 'table')">📋 Table View</button>
-                <button class="view-btn active" onclick="switchView('endpointVuln', 'chart')">📊 Chart View</button>
-                <button class="view-btn" onclick="switchView('endpointVuln', 'json')">📝 JSON View</button>
-            </div>
-
-            <div class="record-count" id="endpointVuln-count"></div>
-            <div id="endpointVuln-table-view" class="table-container" style="display: none;"></div>
-            <div id="endpointVuln-chart-view" class="chart-area">
-                <div class="chart-controls">
-                    <select id="endpointVuln-chart-metric" class="chart-select" onchange="renderChart('endpointVuln')">
-                        <option value="total">Total Vulnerabilities</option>
-                        <option value="critical">Critical</option>
-                        <option value="high">High</option>
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
-                        <option value="risk_score">Risk Score</option>
-                    </select>
-                    <label style="display: flex; align-items: center; gap: 8px; padding: 10px;">
-                        <input type="checkbox" id="endpointVuln-show-all" checked onchange="renderChart('endpointVuln')">
-                        <span>Show All Devices</span>
-                    </label>
+            <!-- Endpoint inventory tab -->
+            <div id="endpoint-tab" class="tab-panel" role="tabpanel">
+                <div class="toolbar">
+                    <input type="text" id="endpoint-search" class="search-box" placeholder="Filter endpoints…" onkeyup="filterData('endpoint')">
+                    <label class="btn" style="cursor:pointer">📁 Upload<input type="file" id="endpoint-upload" accept=".jsonl,.json" hidden onchange="handleFileUpload('endpoint', event)"></label>
+                    <button type="button" class="btn" onclick="loadJSONL('endpoint')">🔄 Reload</button>
+                    <button type="button" class="btn btn-secondary" onclick="exportData('endpoint')">💾 Export</button>
                 </div>
-                <div class="chart-container-wrapper">
-                    <div id="endpointVuln-chart"></div>
+                <div class="refresh-row">
+                    <span class="last-updated" id="endpoint-last-updated"></span>
+                    <button type="button" class="btn" onclick="loadJSONL('endpoint')">Refresh data</button>
+                </div>
+                <div id="endpoint-hero" class="quote-hero"></div>
+                <div class="view-mode">
+                    <label>View charts as</label>
+                    <div class="radio-group">
+                        <label class="radio-opt"><input type="radio" name="endpoint-display" value="chart" checked onchange="setDisplayMode('endpoint')"> Chart</label>
+                        <label class="radio-opt"><input type="radio" name="endpoint-display" value="table" onchange="setDisplayMode('endpoint')"> Table</label>
+                        <label class="radio-opt"><input type="radio" name="endpoint-display" value="both" onchange="setDisplayMode('endpoint')"> Both</label>
+                    </div>
+                </div>
+                <p class="record-count" id="endpoint-count"></p>
+                <div class="sub-tabs" data-type="endpoint">
+                    <div class="sub-tab-list">
+                        <button type="button" class="sub-tab-btn active" data-sub="overview">Overview</button>
+                        <button type="button" class="sub-tab-btn" data-sub="trends">Trends</button>
+                        <button type="button" class="sub-tab-btn" data-sub="environment">By environment</button>
+                        <button type="button" class="sub-tab-btn" data-sub="data">Data</button>
+                    </div>
+                    <div id="endpoint-sub-overview" class="sub-panel active"></div>
+                    <div id="endpoint-sub-trends" class="sub-panel"></div>
+                    <div id="endpoint-sub-environment" class="sub-panel"></div>
+                    <div id="endpoint-sub-data" class="sub-panel">
+                        <div id="endpoint-table-view" class="table-container hidden"></div>
+                        <div id="endpoint-json-view" class="json-view hidden"></div>
+                    </div>
                 </div>
             </div>
-            <div id="endpointVuln-json-view" class="json-view" style="display: none;"></div>
+
         </div>
 
-        <div class="footer">
-            <p>Container: container_vulnerability_metrics.jsonl | Endpoint Inventory: endpoint_inventory_metrics.jsonl | Endpoint Vulnerabilities: endpoint_vulnerability_metrics.jsonl | Adobe Managed Services</p>
-        </div>
+        <footer class="footer">
+            <p>container_vulnerability_metrics.jsonl · endpoint_vulnerability_metrics.jsonl · endpoint_inventory_metrics.jsonl</p>
+            <p>Concept: Mukesh Kesharwani · Adobe Managed Services</p>
+        </footer>
     </div>
 
     <script>
-        // Store loaded data
-        const dataStore = {
-            container: [],
-            endpoint: [],
-            endpointVuln: []
+        /**
+         * Concept: Mukesh Kesharwani
+         * Contact: mukesh.kesharwani@adobe.com
+         */
+        const PLOTLY_LAYOUT_BASE = {
+            template: 'plotly_white',
+            margin: { l: 50, r: 24, t: 48, b: 60 },
+            font: { family: '-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif', color: '#0f172a' },
+            legend: { orientation: 'h', yanchor: 'bottom', y: 1.02, x: 0 },
+            paper_bgcolor: '#fff',
+            plot_bgcolor: '#fafafa'
         };
 
-        const filteredData = {
-            container: [],
-            endpoint: [],
-            endpointVuln: []
+        const PLOTLY_CONFIG = {
+            responsive: true,
+            displaylogo: false,
+            modeBarButtonsToRemove: ['select2d', 'lasso2d']
         };
 
-        // Store chart initialized state
-        const chartInitialized = {
-            container: false,
-            endpoint: false,
-            endpointVuln: false
+        const SEVERITY_COLORS = {
+            critical: '#dc3545',
+            high: '#fd7e14',
+            medium: '#ffc107',
+            low: '#28a745'
         };
 
-        // Normalize timestamp: support both Timestamp and ObservedTimestamp (different JSONL schema versions)
+        const dataStore = { container: [], endpoint: [], endpointVuln: [] };
+        const filteredData = { container: [], endpoint: [], endpointVuln: [] };
+        const lastLoadedAt = { container: null, endpoint: null, endpointVuln: null };
+        const chartKeys = new Set();
+
+        const TAB_META = {
+            container: {
+                title: 'Container Security',
+                filename: 'container_vulnerability_metrics.jsonl',
+                entityLabel: 'clusters',
+                vulnWord: 'Vulnerabilities'
+            },
+            endpoint: {
+                title: 'Endpoint Inventory',
+                filename: 'endpoint_inventory_metrics.jsonl',
+                entityLabel: 'endpoints',
+                vulnWord: 'Detections'
+            },
+            endpointVuln: {
+                title: 'Endpoint Vulnerabilities (ASRM)',
+                filename: 'endpoint_vulnerability_metrics.jsonl',
+                entityLabel: 'devices',
+                vulnWord: 'Vulnerabilities'
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateServerCommand();
+            initMainTabs();
+            initSubTabs();
+            ['container', 'endpointVuln', 'endpoint'].forEach(loadJSONL);
+        });
+
+        function initMainTabs() {
+            document.querySelectorAll('.main-tabs .tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tab = btn.dataset.tab;
+                    document.querySelectorAll('.main-tabs .tab-btn').forEach(b => {
+                        b.classList.toggle('active', b.dataset.tab === tab);
+                        b.setAttribute('aria-selected', b.dataset.tab === tab);
+                    });
+                    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                    document.getElementById(`${tab}-tab`).classList.add('active');
+                    refreshAllViews(tab);
+                });
+            });
+        }
+
+        function initSubTabs() {
+            document.querySelectorAll('.sub-tabs').forEach(wrapper => {
+                const dataType = wrapper.dataset.type;
+                wrapper.querySelectorAll('.sub-tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const sub = btn.dataset.sub;
+                        wrapper.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+                        wrapper.querySelectorAll('.sub-panel').forEach(p => p.classList.remove('active'));
+                        document.getElementById(`${dataType}-sub-${sub}`).classList.add('active');
+                        refreshSubView(dataType, sub);
+                    });
+                });
+            });
+        }
+
+        function getDisplayMode(dataType) {
+            const el = document.querySelector(`input[name="${dataType}-display"]:checked`);
+            return el ? el.value : 'chart';
+        }
+
+        function setDisplayMode(dataType) {
+            refreshAllViews(dataType);
+        }
+
         function getRecordTimestamp(record) {
             return record.Timestamp || record.ObservedTimestamp || null;
         }
 
-        // Load JSONL files on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            // Try to detect and display the current directory path
-            updateServerCommand();
-            
-            loadJSONL('container');
-            loadJSONL('endpoint');
-            loadJSONL('endpointVuln');
-        });
-
-        // Get current directory path from URL
-        function getCurrentDirectoryPath() {
-            if (window.location.protocol === 'file:') {
-                const filePath = decodeURIComponent(window.location.pathname);
-                const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
-                
-                // Clean up path for different OS
-                return dirPath.startsWith('/') && !dirPath.startsWith('//') ? dirPath : dirPath.replace(/^\/+/, '');
-            }
-            return '&lt;path-to-this-folder&gt;';
-        }
-
-        // Update server command with detected path
         function updateServerCommand() {
-            const commandElement = document.getElementById('server-command');
-            
-            // Try to extract path from current URL
+            const el = document.getElementById('server-command');
             if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-                const currentPath = window.location.pathname;
-                const dirPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-                
-                // Show helpful message with detected URL info
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    commandElement.innerHTML = '✓ Already served from: <strong>' + window.location.origin + dirPath + '/</strong>';
-                    commandElement.style.color = '#90EE90';
-                } else {
-                    commandElement.innerHTML = 'cd &lt;path-to-this-folder&gt; && python3 -m http.server 8080';
-                }
-            } else if (window.location.protocol === 'file:') {
-                // File protocol - show the file path
-                const dirPath = getCurrentDirectoryPath();
-                
-                if (dirPath && dirPath !== '&lt;path-to-this-folder&gt;') {
-                    commandElement.innerHTML = 'cd ' + dirPath + ' && python3 -m http.server 8080';
+                    el.textContent = '✓ Served at ' + window.location.origin + window.location.pathname.replace(/\/[^/]+$/, '/');
                 }
             }
         }
 
-        // Switch between tabs
-        function switchTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(`${tabName}-tab`).classList.add('active');
+        function showLoadError(dataType, filename) {
+            const hero = document.getElementById(`${dataType}-hero`);
+            hero.innerHTML = `
+                <div class="alert alert-warning">
+                    <strong>Could not load ${filename}</strong><br>
+                    Run <code>cd data && python3 -m http.server 8080</code> then open
+                    <a href="http://localhost:8080/jsonl_viewer.html">http://localhost:8080/jsonl_viewer.html</a>
+                    or use Upload JSONL.
+                </div>`;
         }
 
-        // Switch between table, chart, and JSON view
-        function switchView(dataType, view) {
-            const tableView = document.getElementById(`${dataType}-table-view`);
-            const chartView = document.getElementById(`${dataType}-chart-view`);
-            const jsonView = document.getElementById(`${dataType}-json-view`);
-            const buttons = document.querySelectorAll(`#${dataType}-tab .view-btn`);
-
-            buttons.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
-            tableView.style.display = 'none';
-            chartView.style.display = 'none';
-            jsonView.style.display = 'none';
-
-            if (view === 'table') {
-                tableView.style.display = 'block';
-            } else if (view === 'chart') {
-                chartView.style.display = 'block';
-                renderChart(dataType);
-            } else {
-                jsonView.style.display = 'block';
+        async function loadJSONL(dataType) {
+            const filename = TAB_META[dataType].filename;
+            if (window.location.protocol === 'file:') {
+                showLoadError(dataType, filename);
+                return;
+            }
+            try {
+                const url = new URL(filename, window.location.href).href;
+                const response = await fetch(url, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const text = await response.text();
+                const lines = text.trim().split('\n').filter(l => l.trim());
+                const data = [];
+                lines.forEach((line, i) => {
+                    try { data.push(JSON.parse(line)); } catch (e) { console.warn(`Parse error line ${i + 1}`, e); }
+                });
+                dataStore[dataType] = data;
+                filteredData[dataType] = data;
+                lastLoadedAt[dataType] = new Date();
+                document.getElementById(`${dataType}-last-updated`).innerHTML =
+                    `Last updated: <strong>${formatDateTime(lastLoadedAt[dataType])}</strong>`;
+                refreshAllViews(dataType);
+            } catch (err) {
+                console.error(err);
+                showLoadError(dataType, filename);
             }
         }
 
-        // Handle file upload
+        function formatDateTime(d) {
+            if (!d) return '—';
+            return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+        }
+
         function handleFileUpload(dataType, event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = e => {
                 try {
-                    const text = e.target.result;
-                    const lines = text.trim().split('\n').filter(line => line.trim());
-                    const data = lines.map(line => JSON.parse(line));
-
+                    const lines = e.target.result.trim().split('\n').filter(l => l.trim());
+                    const data = lines.map(JSON.parse);
                     dataStore[dataType] = data;
                     filteredData[dataType] = data;
-
-                    renderData(dataType);
-                    renderStats(dataType);
-                    renderChart(dataType);
-
-                    // Show success message
-                    showMessage(dataType, `✅ Successfully loaded ${data.length} records from ${file.name}`, 'success');
-                } catch (error) {
-                    console.error('Error parsing file:', error);
-                    showMessage(dataType, `❌ Error parsing file: ${error.message}`, 'error');
+                    lastLoadedAt[dataType] = new Date();
+                    document.getElementById(`${dataType}-last-updated`).innerHTML =
+                        `Last updated: <strong>${formatDateTime(lastLoadedAt[dataType])}</strong> (upload)`;
+                    refreshAllViews(dataType);
+                } catch (err) {
+                    alert('Parse error: ' + err.message);
                 }
             };
             reader.readAsText(file);
         }
 
-        // Show message
-        function showMessage(dataType, message, type) {
-            const container = document.getElementById(`${dataType}-table-view`);
-            const alertClass = type === 'success' ? 'alert-info' : 'alert-warning';
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert ${alertClass}`;
-            alertDiv.innerHTML = message;
-            alertDiv.style.marginBottom = '20px';
-            
-            container.insertBefore(alertDiv, container.firstChild);
-            
-            setTimeout(() => alertDiv.remove(), 5000);
+        function filterData(dataType) {
+            const term = document.getElementById(`${dataType}-search`).value.toLowerCase();
+            filteredData[dataType] = term
+                ? dataStore[dataType].filter(r => JSON.stringify(r).toLowerCase().includes(term))
+                : dataStore[dataType];
+            refreshAllViews(dataType);
         }
 
-        // Show load-error message in visible places (stats + table view; chart view default is visible)
-        function showLoadError(dataType, filename) {
-            const dirPath = getCurrentDirectoryPath();
-            const msgHtml = `
-                <div class="alert alert-warning" style="grid-column: 1 / -1;">
-                    ⚠️ <strong>Could not auto-load ${filename}</strong><br><br>
-                    <strong>Option 1: Use Web Server (Recommended)</strong><br>
-                    Open Terminal and run:<br>
-                    <code style="display: block; background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; color: #333;">
-                    cd ${dirPath}<br>
-                    python3 -m http.server 8080
-                    </code>
-                    Then open: <a href="http://localhost:8080/jsonl_viewer.html" target="_blank" style="color: #2a5298; font-weight: bold;">http://localhost:8080/jsonl_viewer.html</a>
-                    <br><br>
-                    <strong>Option 2: Upload File Manually</strong><br>
-                    Click the "📁 Upload JSONL" button above to select and load the file.
-                </div>
-            `;
-            const statsEl = document.getElementById(`${dataType}-stats`);
-            if (statsEl) statsEl.innerHTML = msgHtml;
-            document.getElementById(`${dataType}-table-view`).innerHTML = msgHtml;
-            // Stats area is visible by default and shows the warning; chart div is left intact so upload + "Reload" still works
+        function refreshAllViews(dataType) {
+            const data = filteredData[dataType];
+            document.getElementById(`${dataType}-count`).textContent =
+                `Showing ${data.length} of ${dataStore[dataType].length} records`;
+            renderHero(dataType);
+            renderDataTableAndJson(dataType);
+            const activeSub = document.querySelector(`.sub-tabs[data-type="${dataType}"] .sub-tab-btn.active`);
+            refreshSubView(dataType, activeSub ? activeSub.dataset.sub : 'overview');
         }
 
-        // Load JSONL file
-        async function loadJSONL(dataType) {
-            let filename;
-            if (dataType === 'container') filename = 'container_vulnerability_metrics.jsonl';
-            else if (dataType === 'endpointVuln') filename = 'endpoint_vulnerability_metrics.jsonl';
-            else filename = 'endpoint_inventory_metrics.jsonl';
+        function refreshSubView(dataType, sub) {
+            if (sub === 'overview') renderOverviewPanel(dataType);
+            else if (sub === 'trends') renderTrendsPanel(dataType);
+            else if (sub === 'environment') renderEnvironmentPanel(dataType);
+            else if (sub === 'data') renderDataPanel(dataType);
+        }
 
-            // When opened via file://, fetch to local files is blocked by browsers — show instructions immediately
-            if (window.location.protocol === 'file:') {
-                showLoadError(dataType, filename);
+        function getSeverityFields(dataType) {
+            if (dataType === 'container') {
+                return {
+                    critical: r => num(r, 'vulnerability.severity.critical', true),
+                    high: r => num(r, 'vulnerability.severity.high', true),
+                    medium: r => num(r, 'vulnerability.severity.medium', true),
+                    low: r => num(r, 'vulnerability.severity.low', true),
+                    total: r => num(r, 'vulnerability.total', true),
+                    risk: r => num(r, 'vulnerability.risk_score', true)
+                };
+            }
+            if (dataType === 'endpointVuln') {
+                return {
+                    critical: r => r['vulnerability.critical'] || 0,
+                    high: r => r['vulnerability.high'] || 0,
+                    medium: r => r['vulnerability.medium'] || 0,
+                    low: r => r['vulnerability.low'] || 0,
+                    total: r => r['vulnerability.total'] || 0,
+                    risk: r => r['vulnerability.risk_score'] || 0
+                };
+            }
+            return {
+                critical: r => r['detections.critical'] || 0,
+                high: r => r['detections.high'] || 0,
+                medium: r => r['detections.medium'] || 0,
+                low: r => r['detections.low'] || 0,
+                total: r => r['detections.total'] || 0,
+                risk: r => r['detections.risk_score'] || 0
+            };
+        }
+
+        function num(record, key, useAttrs) {
+            if (useAttrs && record.Attributes) return record.Attributes[key] || record[key] || 0;
+            return record.Attributes?.[key] ?? record[key] ?? 0;
+        }
+
+        function getEnvironment(record) {
+            return record.Resource?.['deployment.environment'] || record['deployment.environment'] || 'Unknown';
+        }
+
+        function getEntityName(record, dataType) {
+            if (dataType === 'container') {
+                const c = record.Attributes?.['cluster.name'] || record['cluster.name'];
+                const g = record.Attributes?.['group.name'];
+                return (c && c.trim()) || (g && g.trim()) || null;
+            }
+            if (dataType === 'endpointVuln') return record['device.name'] || record['device.id'] || null;
+            return record['endpoint.name'] || record.Attributes?.['endpoint.name'] || null;
+        }
+
+        function renderHero(dataType) {
+            const data = filteredData[dataType];
+            const meta = TAB_META[dataType];
+            const sev = getSeverityFields(dataType);
+            const hero = document.getElementById(`${dataType}-hero`);
+
+            if (!data.length) {
+                hero.innerHTML = `<div class="symbol-title">${meta.title}</div><p class="symbol-caption">No data loaded</p>`;
                 return;
             }
 
-            try {
-                // Resolve URL relative to current page so it works when HTML is in a subpath
-                const url = new URL(filename, window.location.href).href;
-                const response = await fetch(url);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                const text = await response.text();
-                
-                // Parse JSONL (one JSON object per line)
-                const lines = text.trim().split('\n').filter(line => line.trim());
-                const data = [];
-                for (let i = 0; i < lines.length; i++) {
-                    try {
-                        data.push(JSON.parse(lines[i]));
-                    } catch (parseErr) {
-                        console.warn(`Parse error in ${filename} line ${i + 1}:`, parseErr);
-                    }
-                }
+            let totalCrit = 0, totalHigh = 0, totalMed = 0, totalAll = 0, totalRisk = 0;
+            const entities = new Set();
+            let latestTs = null;
 
-                dataStore[dataType] = data;
-                filteredData[dataType] = data;
+            data.forEach(r => {
+                totalCrit += sev.critical(r);
+                totalHigh += sev.high(r);
+                totalMed += sev.medium(r);
+                totalAll += sev.total(r);
+                totalRisk += sev.risk(r);
+                const en = getEntityName(r, dataType);
+                if (en) entities.add(en);
+                const ts = getRecordTimestamp(r);
+                if (ts && (!latestTs || new Date(ts) > new Date(latestTs))) latestTs = ts;
+            });
 
-                renderData(dataType);
-                renderStats(dataType);
-                renderChart(dataType);
-            } catch (error) {
-                console.error(`Error loading ${filename}:`, error);
-                showLoadError(dataType, filename);
+            const scanLabel = latestTs ? new Date(latestTs).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+            const avgRisk = data.length ? (totalRisk / data.length).toFixed(1) : '0';
+
+            hero.innerHTML = `
+                <div class="symbol-title">${meta.title}</div>
+                <div class="symbol-caption">As-of latest scan in filtered set · ${data.length} record(s) · ${entities.size} unique ${meta.entityLabel}</div>
+                <div class="metrics-row">
+                    <div class="metric-card">
+                        <div class="metric-label">Latest scan</div>
+                        <div class="metric-value" style="font-size:1.1rem">${scanLabel}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total ${meta.vulnWord}</div>
+                        <div class="metric-value">${totalAll.toLocaleString()}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Critical</div>
+                        <div class="metric-value" style="color:var(--critical)">${totalCrit.toLocaleString()}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">High</div>
+                        <div class="metric-value" style="color:var(--high)">${totalHigh.toLocaleString()}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Avg risk score</div>
+                        <div class="metric-value">${avgRisk}</div>
+                    </div>
+                </div>`;
+        }
+
+        function renderOverviewPanel(dataType) {
+            const panel = document.getElementById(`${dataType}-sub-overview`);
+            const data = filteredData[dataType];
+            const mode = getDisplayMode(dataType);
+            const showChart = mode === 'chart' || mode === 'both';
+            const showTable = mode === 'table' || mode === 'both';
+
+            if (!data.length) {
+                panel.innerHTML = '<div class="no-data">No data for overview charts</div>';
+                return;
+            }
+
+            panel.innerHTML = `
+                <details class="chart-expander" open>
+                    <summary>Severity breakdown (aggregated)</summary>
+                    <div class="expander-body">
+                        <div id="${dataType}-chart-severity" class="chart-box chart-sm"></div>
+                        ${showTable ? `<div id="${dataType}-table-severity" class="table-container" style="margin-top:0.75rem"></div>` : ''}
+                    </div>
+                </details>
+                <details class="chart-expander" open>
+                    <summary>Top entities by total count</summary>
+                    <div class="expander-body">
+                        <div id="${dataType}-chart-top" class="chart-box"></div>
+                    </div>
+                </details>
+                <details class="chart-expander">
+                    <summary>Risk score distribution</summary>
+                    <div class="expander-body">
+                        <div id="${dataType}-chart-risk" class="chart-box chart-sm"></div>
+                    </div>
+                </details>`;
+
+            if (showChart) {
+                plotSeverityBreakdown(dataType);
+                plotTopEntities(dataType);
+                plotRiskHistogram(dataType);
+            }
+            if (showTable && document.getElementById(`${dataType}-table-severity`)) {
+                renderSeverityTable(dataType);
             }
         }
 
-        // Render statistics
-        function renderStats(dataType) {
-            const data = dataStore[dataType];
-            const statsContainer = document.getElementById(`${dataType}-stats`);
-
-            if (dataType === 'container') {
-                const totalRecords = data.length;
-                const totalVulns = data.reduce((sum, record) => 
-                    sum + (record.Attributes?.['vulnerability.total'] || record['vulnerability.total'] || 0), 0);
-                const totalCritical = data.reduce((sum, record) => 
-                    sum + (record.Attributes?.['vulnerability.severity.critical'] || record['vulnerability.severity.critical'] || 0), 0);
-                const totalHigh = data.reduce((sum, record) => 
-                    sum + (record.Attributes?.['vulnerability.severity.high'] || record['vulnerability.severity.high'] || 0), 0);
-                const totalMedium = data.reduce((sum, record) => 
-                    sum + (record.Attributes?.['vulnerability.severity.medium'] || record['vulnerability.severity.medium'] || 0), 0);
-
-                statsContainer.innerHTML = `
-                    <div class="stat-card">
-                        <h3>Total Records</h3>
-                        <div class="value">${totalRecords}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Total Vulnerabilities</h3>
-                        <div class="value">${totalVulns.toLocaleString()}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Critical</h3>
-                        <div class="value">${totalCritical.toLocaleString()}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>High</h3>
-                        <div class="value">${totalHigh.toLocaleString()}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Medium</h3>
-                        <div class="value">${totalMedium.toLocaleString()}</div>
-                    </div>
-                `;
-            } else if (dataType === 'endpoint') {
-                const totalRecords = data.length;
-                const uniqueEndpoints = new Set(data.map(r => r['endpoint.guid'] || r.Attributes?.['endpoint.guid'])).size;
-                const totalDetections = data.reduce((sum, record) => 
-                    sum + (record['detections.total'] || record.Attributes?.['detections.total'] || 0), 0);
-                const avgRiskScore = data.length > 0 
-                    ? (data.reduce((sum, record) => sum + (record['detections.risk_score'] || record.Attributes?.['detections.risk_score'] || 0), 0) / data.length).toFixed(1)
-                    : 0;
-
-                statsContainer.innerHTML = `
-                    <div class="stat-card">
-                        <h3>Total Records</h3>
-                        <div class="value">${totalRecords}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Unique Endpoints</h3>
-                        <div class="value">${uniqueEndpoints}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Total Detections</h3>
-                        <div class="value">${totalDetections}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Avg Risk Score</h3>
-                        <div class="value">${avgRiskScore}</div>
-                    </div>
-                `;
-            } else if (dataType === 'endpointVuln') {
-                const totalRecords = data.length;
-                const uniqueDevices = new Set(data.map(r => r['device.id'])).size;
-                const totalVulns = data.reduce((sum, record) => sum + (record['vulnerability.total'] || 0), 0);
-                const totalCritical = data.reduce((sum, record) => sum + (record['vulnerability.critical'] || 0), 0);
-                const totalHigh = data.reduce((sum, record) => sum + (record['vulnerability.high'] || 0), 0);
-                const totalMedium = data.reduce((sum, record) => sum + (record['vulnerability.medium'] || 0), 0);
-                const totalLow = data.reduce((sum, record) => sum + (record['vulnerability.low'] || 0), 0);
-                const avgRiskScore = data.length > 0
-                    ? (data.reduce((sum, record) => sum + (record['vulnerability.risk_score'] || 0), 0) / data.length).toFixed(1)
-                    : 0;
-
-                statsContainer.innerHTML = `
-                    <div class="stat-card">
-                        <h3>Total Records</h3>
-                        <div class="value">${totalRecords}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Unique Devices</h3>
-                        <div class="value">${uniqueDevices}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Total Vulnerabilities</h3>
-                        <div class="value">${totalVulns.toLocaleString()}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Critical</h3>
-                        <div class="value">${totalCritical.toLocaleString()}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>High</h3>
-                        <div class="value">${totalHigh.toLocaleString()}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Medium</h3>
-                        <div class="value">${totalMedium.toLocaleString()}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Low</h3>
-                        <div class="value">${totalLow.toLocaleString()}</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Avg Risk Score</h3>
-                        <div class="value">${avgRiskScore}</div>
-                    </div>
-                `;
+        function renderTrendsPanel(dataType) {
+            const panel = document.getElementById(`${dataType}-sub-trends`);
+            const mode = getDisplayMode(dataType);
+            if (mode === 'table') {
+                panel.innerHTML = '<p class="section-title">Switch to Chart or Both to see trend lines.</p>';
+                return;
             }
+            panel.innerHTML = `
+                <div class="chart-controls">
+                    <select id="${dataType}-chart-metric" class="chart-select" onchange="renderTrendChart('${dataType}')">
+                        <option value="total">Total</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                        <option value="risk_score">Risk score</option>
+                    </select>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:0.875rem">
+                        <input type="checkbox" id="${dataType}-show-all" checked onchange="renderTrendChart('${dataType}')">
+                        Show all series (top 12 if unchecked)
+                    </label>
+                </div>
+                <details class="chart-expander" open>
+                    <summary>Trends over time</summary>
+                    <div class="expander-body">
+                        <div id="${dataType}-chart-trend" class="chart-box"></div>
+                    </div>
+                </details>`;
+            renderTrendChart(dataType);
         }
 
-        // Render data in table and JSON views
-        function renderData(dataType) {
+        function renderEnvironmentPanel(dataType) {
+            const panel = document.getElementById(`${dataType}-sub-environment`);
+            const mode = getDisplayMode(dataType);
+            if (mode === 'table') {
+                panel.innerHTML = '<p class="section-title">Switch to Chart or Both for environment charts.</p>';
+                return;
+            }
+            panel.innerHTML = `
+                <details class="chart-expander" open>
+                    <summary>Counts by deployment environment</summary>
+                    <div class="expander-body">
+                        <div id="${dataType}-chart-env" class="chart-box"></div>
+                    </div>
+                </details>`;
+            plotByEnvironment(dataType);
+        }
+
+        function renderDataPanel(dataType) {
+            const mode = getDisplayMode(dataType);
+            const tableEl = document.getElementById(`${dataType}-table-view`);
+            const jsonEl = document.getElementById(`${dataType}-json-view`);
+            tableEl.classList.toggle('hidden', mode === 'chart');
+            jsonEl.classList.add('hidden');
+            if (mode === 'chart') return;
+            renderDataTableAndJson(dataType);
+        }
+
+        function renderDataTableAndJson(dataType) {
             const data = filteredData[dataType];
             const tableView = document.getElementById(`${dataType}-table-view`);
             const jsonView = document.getElementById(`${dataType}-json-view`);
-            const countElement = document.getElementById(`${dataType}-count`);
+            const mode = getDisplayMode(dataType);
 
-            countElement.textContent = `Showing ${data.length} of ${dataStore[dataType].length} records`;
+            if (mode === 'chart') return;
 
-            if (data.length === 0) {
-                tableView.innerHTML = '<div class="no-data">No data to display</div>';
-                jsonView.innerHTML = '<div class="no-data">No data to display</div>';
+            if (!data.length) {
+                tableView.innerHTML = '<div class="no-data">No data</div>';
+                tableView.classList.remove('hidden');
                 return;
             }
 
-            // Render table
-            if (dataType === 'container') {
-                renderContainerTable(data, tableView);
-            } else if (dataType === 'endpointVuln') {
-                renderEndpointVulnTable(data, tableView);
-            } else {
-                renderEndpointTable(data, tableView);
-            }
+            if (dataType === 'container') renderContainerTable(data, tableView);
+            else if (dataType === 'endpointVuln') renderEndpointVulnTable(data, tableView);
+            else renderEndpointTable(data, tableView);
+            tableView.classList.remove('hidden');
 
-            // Render JSON
-            jsonView.innerHTML = data.map(record => 
-                syntaxHighlight(JSON.stringify(record, null, 2))
-            ).join('\n\n');
+            jsonView.innerHTML = data.map(r => syntaxHighlight(JSON.stringify(r, null, 2))).join('\n\n');
+            jsonView.classList.toggle('hidden', mode !== 'both');
         }
 
-        // Render container vulnerability table
-        function renderContainerTable(data, container) {
-            const html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>Environment</th>
-                            <th>Business</th>
-                            <th>Cluster Name</th>
-                            <th>Total Vulns</th>
-                            <th>Critical</th>
-                            <th>High</th>
-                            <th>Medium</th>
-                            <th>Low</th>
-                            <th>Risk Score</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(record => {
-                            // Extract values with proper fallbacks (support Timestamp or ObservedTimestamp)
-                            const ts = getRecordTimestamp(record);
-                            const timestamp = ts ? new Date(ts).toLocaleString() : '-';
-                            const environment = record.Resource?.['deployment.environment'] || record['deployment.environment'] || '-';
-                            const businessName = record.Resource?.['cloud.account.name'] || record['cloud.account.name'] || '-';
-                            const clusterName = record.Attributes?.['cluster.name'] || record['cluster.name'] || record.Attributes?.['group.name'] || '-';
-                            const total = record.Attributes?.['vulnerability.total'] || record['vulnerability.total'] || 0;
-                            const critical = record.Attributes?.['vulnerability.severity.critical'] || record['vulnerability.severity.critical'] || 0;
-                            const high = record.Attributes?.['vulnerability.severity.high'] || record['vulnerability.severity.high'] || 0;
-                            const medium = record.Attributes?.['vulnerability.severity.medium'] || record['vulnerability.severity.medium'] || 0;
-                            const low = record.Attributes?.['vulnerability.severity.low'] || record['vulnerability.severity.low'] || 0;
-                            const riskScore = record.Attributes?.['vulnerability.risk_score'] || record['vulnerability.risk_score'] || 0;
-                            
-                            return `
-                            <tr>
-                                <td>${timestamp}</td>
-                                <td>${environment}</td>
-                                <td>${businessName}</td>
-                                <td>${clusterName}</td>
-                                <td><strong>${total}</strong></td>
-                                <td><span class="badge badge-critical">${critical}</span></td>
-                                <td><span class="badge badge-high">${high}</span></td>
-                                <td><span class="badge badge-medium">${medium}</span></td>
-                                <td><span class="badge badge-low">${low}</span></td>
-                                <td>${riskScore}</td>
-                            </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            `;
-            container.innerHTML = html;
+        function plotChart(divId, traces, layoutExtra, height = 420) {
+            const el = document.getElementById(divId);
+            if (!el) return;
+            const layout = { ...PLOTLY_LAYOUT_BASE, height, ...layoutExtra };
+            Plotly.react(el, traces, layout, PLOTLY_CONFIG);
         }
 
-        // Render endpoint vulnerabilities table (from endpoint_vulnerability_metrics.jsonl)
-        function renderEndpointVulnTable(data, container) {
-            const html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>Environment</th>
-                            <th>Device Name</th>
-                            <th>Total Vulns</th>
-                            <th>Critical</th>
-                            <th>High</th>
-                            <th>Medium</th>
-                            <th>Low</th>
-                            <th>Risk Score</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(record => `
-                            <tr>
-                                <td>${getRecordTimestamp(record) ? new Date(getRecordTimestamp(record)).toLocaleString() : '-'}</td>
-                                <td>${record['deployment.environment'] || '-'}</td>
-                                <td>${record['device.name'] || record['device.id'] || '-'}</td>
-                                <td><strong>${record['vulnerability.total'] || 0}</strong></td>
-                                <td><span class="badge badge-critical">${record['vulnerability.critical'] || 0}</span></td>
-                                <td><span class="badge badge-high">${record['vulnerability.high'] || 0}</span></td>
-                                <td><span class="badge badge-medium">${record['vulnerability.medium'] || 0}</span></td>
-                                <td><span class="badge badge-low">${record['vulnerability.low'] || 0}</span></td>
-                                <td>${record['vulnerability.risk_score'] || 0}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-            container.innerHTML = html;
-        }
-
-        // Render endpoint inventory table
-        function renderEndpointTable(data, container) {
-            const html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>Environment</th>
-                            <th>Endpoint Name</th>
-                            <th>OS</th>
-                            <th>Total Detections</th>
-                            <th>Critical</th>
-                            <th>High</th>
-                            <th>Medium</th>
-                            <th>Low</th>
-                            <th>Risk Score</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.map(record => `
-                            <tr>
-                                <td>${getRecordTimestamp(record) ? new Date(getRecordTimestamp(record)).toLocaleString() : '-'}</td>
-                                <td>${record['deployment.environment'] || '-'}</td>
-                                <td>${record['endpoint.name'] || '-'}</td>
-                                <td>${record['endpoint.os.name'] || ''} ${record['endpoint.os.version'] || ''}</td>
-                                <td><strong>${record['detections.total'] || 0}</strong></td>
-                                <td><span class="badge badge-critical">${record['detections.critical'] || 0}</span></td>
-                                <td><span class="badge badge-high">${record['detections.high'] || 0}</span></td>
-                                <td><span class="badge badge-medium">${record['detections.medium'] || 0}</span></td>
-                                <td><span class="badge badge-low">${record['detections.low'] || 0}</span></td>
-                                <td>${record['detections.risk_score'] || 0}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-            container.innerHTML = html;
-        }
-
-        // Filter data based on search
-        function filterData(dataType) {
-            const searchTerm = document.getElementById(`${dataType}-search`).value.toLowerCase();
-            const data = dataStore[dataType];
-
-            if (!searchTerm) {
-                filteredData[dataType] = data;
-            } else {
-                filteredData[dataType] = data.filter(record => 
-                    JSON.stringify(record).toLowerCase().includes(searchTerm)
-                );
-            }
-
-            renderData(dataType);
-        }
-
-        // Export data as JSON
-        function exportData(dataType) {
+        function plotSeverityBreakdown(dataType) {
             const data = filteredData[dataType];
-            const filename = `${dataType}_data_export.json`;
-            const json = JSON.stringify(data, null, 2);
-            
-            const blob = new Blob([json], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(url);
+            const sev = getSeverityFields(dataType);
+            let c = 0, h = 0, m = 0, l = 0;
+            data.forEach(r => {
+                c += sev.critical(r); h += sev.high(r); m += sev.medium(r); l += sev.low(r);
+            });
+            const labels = ['Critical', 'High', 'Medium', 'Low'];
+            const values = [c, h, m, l];
+            const colors = [SEVERITY_COLORS.critical, SEVERITY_COLORS.high, SEVERITY_COLORS.medium, SEVERITY_COLORS.low];
+
+            plotChart(`${dataType}-chart-severity`, [{
+                type: 'bar',
+                x: labels,
+                y: values,
+                marker: { color: colors },
+                text: values.map(v => v.toLocaleString()),
+                textposition: 'outside',
+                hovertemplate: '%{x}: %{y:,}<extra></extra>'
+            }], {
+                title: { text: `${TAB_META[dataType].vulnWord} by severity`, font: { size: 16 } },
+                yaxis: { title: 'Count', rangemode: 'tozero' },
+                xaxis: { title: '' },
+                showlegend: false
+            }, 320);
         }
 
-        // Render chart with Plotly.js
-        function renderChart(dataType) {
+        function plotTopEntities(dataType, limit = 15) {
             const data = filteredData[dataType];
-            if (data.length === 0) return;
+            const sev = getSeverityFields(dataType);
+            const totals = {};
+            data.forEach(r => {
+                const name = getEntityName(r, dataType);
+                if (!name || name === 'Ungrouped') return;
+                totals[name] = (totals[name] || 0) + sev.total(r);
+            });
+            const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, limit);
+            const names = sorted.map(([n]) => n).reverse();
+            const vals = sorted.map(([, v]) => v).reverse();
 
-            const chartDiv = document.getElementById(`${dataType}-chart`);
+            plotChart(`${dataType}-chart-top`, [{
+                type: 'bar',
+                orientation: 'h',
+                y: names,
+                x: vals,
+                marker: { color: '#059669' },
+                text: vals.map(v => v.toLocaleString()),
+                textposition: 'outside',
+                hovertemplate: '%{y}: %{x:,}<extra></extra>'
+            }], {
+                title: { text: `Top ${limit} ${TAB_META[dataType].entityLabel}`, font: { size: 16 } },
+                xaxis: { title: TAB_META[dataType].vulnWord, rangemode: 'tozero' },
+                margin: { l: 180, r: 40, t: 48, b: 50 }
+            }, 420);
+        }
 
-            // Get selected metric
+        function plotRiskHistogram(dataType) {
+            const data = filteredData[dataType];
+            const sev = getSeverityFields(dataType);
+            const scores = data.map(sev.risk).filter(v => v > 0);
+            if (!scores.length) {
+                document.getElementById(`${dataType}-chart-risk`).innerHTML =
+                    '<p class="no-data" style="padding:2rem">No non-zero risk scores in filter</p>';
+                return;
+            }
+            plotChart(`${dataType}-chart-risk`, [{
+                type: 'histogram',
+                x: scores,
+                marker: { color: '#059669', line: { color: '#047857', width: 1 } },
+                nbinsx: Math.min(30, Math.max(10, Math.ceil(Math.sqrt(scores.length))))
+            }], {
+                title: { text: 'Risk score distribution', font: { size: 16 } },
+                xaxis: { title: 'Risk score' },
+                yaxis: { title: 'Records' }
+            }, 320);
+        }
+
+        function plotByEnvironment(dataType) {
+            const data = filteredData[dataType];
+            const sev = getSeverityFields(dataType);
+            const byEnv = {};
+            data.forEach(r => {
+                const env = getEnvironment(r);
+                if (!byEnv[env]) byEnv[env] = { critical: 0, high: 0, medium: 0, low: 0 };
+                byEnv[env].critical += sev.critical(r);
+                byEnv[env].high += sev.high(r);
+                byEnv[env].medium += sev.medium(r);
+                byEnv[env].low += sev.low(r);
+            });
+            const envs = Object.keys(byEnv).sort();
+            plotChart(`${dataType}-chart-env`, [
+                { name: 'Critical', type: 'bar', x: envs, y: envs.map(e => byEnv[e].critical), marker: { color: SEVERITY_COLORS.critical } },
+                { name: 'High', type: 'bar', x: envs, y: envs.map(e => byEnv[e].high), marker: { color: SEVERITY_COLORS.high } },
+                { name: 'Medium', type: 'bar', x: envs, y: envs.map(e => byEnv[e].medium), marker: { color: SEVERITY_COLORS.medium } },
+                { name: 'Low', type: 'bar', x: envs, y: envs.map(e => byEnv[e].low), marker: { color: SEVERITY_COLORS.low } }
+            ], {
+                title: { text: 'Severity by environment', font: { size: 16 } },
+                barmode: 'stack',
+                xaxis: { title: 'Environment', tickangle: -25 },
+                yaxis: { title: 'Count', rangemode: 'tozero' }
+            }, 420);
+        }
+
+        function renderSeverityTable(dataType) {
+            const el = document.getElementById(`${dataType}-table-severity`);
+            if (!el) return;
+            const data = filteredData[dataType];
+            const sev = getSeverityFields(dataType);
+            let c = 0, h = 0, m = 0, l = 0, t = 0;
+            data.forEach(r => {
+                c += sev.critical(r); h += sev.high(r); m += sev.medium(r); l += sev.low(r); t += sev.total(r);
+            });
+            el.innerHTML = `<table><thead><tr><th>Severity</th><th>Count</th></tr></thead><tbody>
+                <tr><td>Critical</td><td>${c.toLocaleString()}</td></tr>
+                <tr><td>High</td><td>${h.toLocaleString()}</td></tr>
+                <tr><td>Medium</td><td>${m.toLocaleString()}</td></tr>
+                <tr><td>Low</td><td>${l.toLocaleString()}</td></tr>
+                <tr><td><strong>Total</strong></td><td><strong>${t.toLocaleString()}</strong></td></tr>
+            </tbody></table>`;
+        }
+
+        function renderTrendChart(dataType) {
+            const data = filteredData[dataType];
+            const chartDiv = document.getElementById(`${dataType}-chart-trend`);
+            if (!chartDiv || !data.length) return;
+
             const metricSelect = document.getElementById(`${dataType}-chart-metric`);
-            const selectedMetric = metricSelect.value;
+            const selectedMetric = metricSelect ? metricSelect.value : 'total';
+            const showAll = document.getElementById(`${dataType}-show-all`)?.checked ?? true;
+            const sev = getSeverityFields(dataType);
 
-            // Prepare data by cluster/group/endpoint
             const timeSeriesData = {};
-            
             data.forEach(record => {
                 const timestamp = getRecordTimestamp(record);
-                if (!timestamp) return; // skip records with no time so chart axis stays valid
-                let entityName;
+                if (!timestamp) return;
+                const entityName = getEntityName(record, dataType) || 'Unknown';
+                if (['Unknown', 'Ungrouped', ''].includes(entityName)) return;
+
                 let metricValue;
-
-                if (dataType === 'container') {
-                    // Try to get cluster name from various possible paths (ignore empty group.name)
-                    const clusterName = record.Attributes?.['cluster.name'] || record['cluster.name'];
-                    const groupName = record.Attributes?.['group.name'];
-                    entityName = (clusterName && clusterName.trim()) || (groupName && groupName.trim()) || 'Unknown';
-                    
-                    switch(selectedMetric) {
-                        case 'total':
-                            metricValue = record.Attributes?.['vulnerability.total'] || 
-                                         record['vulnerability.total'] || 0;
-                            break;
-                        case 'critical':
-                            metricValue = record.Attributes?.['vulnerability.severity.critical'] || 
-                                         record['vulnerability.severity.critical'] || 0;
-                            break;
-                        case 'high':
-                            metricValue = record.Attributes?.['vulnerability.severity.high'] || 
-                                         record['vulnerability.severity.high'] || 0;
-                            break;
-                        case 'medium':
-                            metricValue = record.Attributes?.['vulnerability.severity.medium'] || 
-                                         record['vulnerability.severity.medium'] || 0;
-                            break;
-                        case 'low':
-                            metricValue = record.Attributes?.['vulnerability.severity.low'] || 
-                                         record['vulnerability.severity.low'] || 0;
-                            break;
-                        case 'risk_score':
-                            metricValue = record.Attributes?.['vulnerability.risk_score'] || 
-                                         record['vulnerability.risk_score'] || 0;
-                            break;
-                    }
-                } else if (dataType === 'endpointVuln') {
-                    entityName = record['device.name'] || record['device.id'] || 'Unknown';
-                    switch(selectedMetric) {
-                        case 'total':
-                            metricValue = record['vulnerability.total'] || 0;
-                            break;
-                        case 'critical':
-                            metricValue = record['vulnerability.critical'] || 0;
-                            break;
-                        case 'high':
-                            metricValue = record['vulnerability.high'] || 0;
-                            break;
-                        case 'medium':
-                            metricValue = record['vulnerability.medium'] || 0;
-                            break;
-                        case 'low':
-                            metricValue = record['vulnerability.low'] || 0;
-                            break;
-                        case 'risk_score':
-                            metricValue = record['vulnerability.risk_score'] || 0;
-                            break;
-                    }
-                } else {
-                    entityName = record['endpoint.name'] || 
-                                 record.Attributes?.['endpoint.name'] || 'Unknown';
-                    switch(selectedMetric) {
-                        case 'total':
-                            metricValue = record['detections.total'] || 
-                                         record.Attributes?.['detections.total'] || 0;
-                            break;
-                        case 'critical':
-                            metricValue = record['detections.critical'] || 
-                                         record.Attributes?.['detections.critical'] || 0;
-                            break;
-                        case 'high':
-                            metricValue = record['detections.high'] || 
-                                         record.Attributes?.['detections.high'] || 0;
-                            break;
-                        case 'medium':
-                            metricValue = record['detections.medium'] || 
-                                         record.Attributes?.['detections.medium'] || 0;
-                            break;
-                        case 'low':
-                            metricValue = record['detections.low'] || 
-                                         record.Attributes?.['detections.low'] || 0;
-                            break;
-                        case 'risk_score':
-                            metricValue = record['detections.risk_score'] || 
-                                         record.Attributes?.['detections.risk_score'] || 0;
-                            break;
-                    }
+                switch (selectedMetric) {
+                    case 'critical': metricValue = sev.critical(record); break;
+                    case 'high': metricValue = sev.high(record); break;
+                    case 'medium': metricValue = sev.medium(record); break;
+                    case 'low': metricValue = sev.low(record); break;
+                    case 'risk_score': metricValue = sev.risk(record); break;
+                    default: metricValue = sev.total(record);
                 }
-
-                if (!timeSeriesData[entityName]) {
-                    timeSeriesData[entityName] = {
-                        x: [],
-                        y: []
-                    };
-                }
-
+                if (!timeSeriesData[entityName]) timeSeriesData[entityName] = { x: [], y: [] };
                 timeSeriesData[entityName].x.push(timestamp);
                 timeSeriesData[entityName].y.push(metricValue);
             });
 
-            // Remove metadata/empty names from the time series data
-            delete timeSeriesData['Ungrouped'];
-            delete timeSeriesData['Unknown'];
-            delete timeSeriesData['unknown'];
-            delete timeSeriesData[''];
+            Object.keys(timeSeriesData).forEach(entity => {
+                const s = timeSeriesData[entity];
+                const pairs = s.x.map((xStr, i) => {
+                    const t = new Date(xStr).getTime();
+                    return { t, y: s.y[i], valid: !Number.isNaN(t) };
+                }).filter(p => p.valid);
+                pairs.sort((a, b) => a.t - b.t);
+                s.x = pairs.map(p => new Date(p.t));
+                s.y = pairs.map(p => p.y);
+            });
 
-            // Color palette
-            const colors = [
-                '#667eea', '#764ba2', '#f093fb', '#4facfe',
-                '#43e97b', '#fa709a', '#fee140', '#30cfd0',
-                '#a8edea', '#fed6e3', '#c471ed', '#12c2e9'
-            ];
+            let entities = Object.keys(timeSeriesData);
+            if (!showAll && entities.length > 12) {
+                const ranked = entities.map(e => ({
+                    e,
+                    sum: timeSeriesData[e].y.reduce((a, b) => a + b, 0)
+                })).sort((a, b) => b.sum - a.sum).slice(0, 12);
+                entities = ranked.map(r => r.e);
+            }
 
-            // Create Plotly traces
-            const traces = Object.keys(timeSeriesData).map((entity, index) => ({
+            const palette = ['#059669', '#2563eb', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#65a30d', '#ea580c'];
+            const traces = entities.map((entity, i) => ({
                 name: entity,
                 x: timeSeriesData[entity].x,
                 y: timeSeriesData[entity].y,
                 type: 'scatter',
                 mode: 'lines+markers',
-                line: {
-                    color: colors[index % colors.length],
-                    width: 3
-                },
-                marker: {
-                    size: 6,
-                    color: colors[index % colors.length]
-                },
-                hovertemplate: '<b>%{fullData.name}</b><br>' +
-                              'Time: %{x|%Y-%m-%d %H:%M}<br>' +
-                              'Value: %{y}<br>' +
-                              '<extra></extra>'
+                line: { color: palette[i % palette.length], width: 2 },
+                marker: { size: 5 },
+                hovertemplate: '<b>%{fullData.name}</b><br>%{x|%Y-%m-%d %H:%M}<br>%{y}<extra></extra>'
             }));
 
-            // Get metric label
-            const vulnLabel = (dataType === 'container' || dataType === 'endpointVuln') ? 'Vulnerabilities' : 'Detections';
             const metricLabels = {
-                'total': dataType === 'container' ? 'Total Vulnerabilities' : (dataType === 'endpointVuln' ? 'Total Vulnerabilities' : 'Total Detections'),
-                'critical': (dataType === 'container' || dataType === 'endpointVuln') ? 'Critical Vulnerabilities' : 'Critical Detections',
-                'high': (dataType === 'container' || dataType === 'endpointVuln') ? 'High Vulnerabilities' : 'High Detections',
-                'medium': (dataType === 'container' || dataType === 'endpointVuln') ? 'Medium Vulnerabilities' : 'Medium Detections',
-                'low': (dataType === 'container' || dataType === 'endpointVuln') ? 'Low Vulnerabilities' : 'Low Detections',
-                'risk_score': 'Risk Score'
+                total: 'Total', critical: 'Critical', high: 'High',
+                medium: 'Medium', low: 'Low', risk_score: 'Risk score'
             };
 
-            // Layout configuration
-            const layout = {
-                title: {
-                    text: `${metricLabels[selectedMetric]} Over Time`,
-                    font: {
-                        size: 20,
-                        weight: 600
-                    }
-                },
-                xaxis: {
-                    title: 'Time',
-                    type: 'date',
-                    tickformat: '%b %d',
-                    showgrid: true,
-                    gridcolor: 'rgba(0, 0, 0, 0.1)'
-                },
-                yaxis: {
-                    title: metricLabels[selectedMetric],
-                    rangemode: 'tozero',
-                    showgrid: true,
-                    gridcolor: 'rgba(0, 0, 0, 0.1)'
-                },
+            plotChart(`${dataType}-chart-trend`, traces, {
+                title: { text: `${metricLabels[selectedMetric]} over time`, font: { size: 16 } },
+                xaxis: { title: 'Time', type: 'date', tickformat: '%b %d, %Y' },
+                yaxis: { title: metricLabels[selectedMetric], rangemode: 'tozero' },
                 hovermode: 'closest',
-                legend: {
-                    orientation: 'h',
-                    yanchor: 'top',
-                    y: -0.15,
-                    xanchor: 'center',
-                    x: 0.5
-                },
-                margin: {
-                    l: 60,
-                    r: 30,
-                    t: 80,
-                    b: 100
-                },
-                plot_bgcolor: '#f9f9f9',
-                paper_bgcolor: 'white'
-            };
-
-            // Config for Plotly
-            const config = {
-                responsive: true,
-                displayModeBar: true,
-                displaylogo: false,
-                modeBarButtonsToRemove: ['select2d', 'lasso2d'],
-                toImageButtonOptions: {
-                    format: 'png',
-                    filename: `${dataType}_${selectedMetric}_chart`,
-                    height: 600,
-                    width: 1200,
-                    scale: 2
-                }
-            };
-
-            // Render or update the chart
-            if (chartInitialized[dataType]) {
-                Plotly.react(chartDiv, traces, layout, config);
-            } else {
-                Plotly.newPlot(chartDiv, traces, layout, config);
-                chartInitialized[dataType] = true;
-            }
+                showlegend: entities.length <= 8,
+                legend: { orientation: 'h', y: -0.2 }
+            }, 420);
         }
 
-        // Syntax highlighting for JSON
+        function renderContainerTable(data, container) {
+            container.innerHTML = `<table><thead><tr>
+                <th>Timestamp</th><th>Environment</th><th>Business</th><th>Cluster</th>
+                <th>Total</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>Risk</th>
+            </tr></thead><tbody>${data.map(record => {
+                const ts = getRecordTimestamp(record);
+                const timestamp = ts ? new Date(ts).toLocaleString() : '-';
+                const environment = record.Resource?.['deployment.environment'] || record['deployment.environment'] || '-';
+                const businessName = record.Resource?.['cloud.account.name'] || record['cloud.account.name'] || '-';
+                const clusterName = record.Attributes?.['cluster.name'] || record['cluster.name'] || '-';
+                const total = num(record, 'vulnerability.total', true);
+                const critical = num(record, 'vulnerability.severity.critical', true);
+                const high = num(record, 'vulnerability.severity.high', true);
+                const medium = num(record, 'vulnerability.severity.medium', true);
+                const low = num(record, 'vulnerability.severity.low', true);
+                const riskScore = num(record, 'vulnerability.risk_score', true);
+                return `<tr>
+                    <td>${timestamp}</td><td>${environment}</td><td>${businessName}</td><td>${clusterName}</td>
+                    <td><strong>${total}</strong></td>
+                    <td><span class="badge badge-critical">${critical}</span></td>
+                    <td><span class="badge badge-high">${high}</span></td>
+                    <td><span class="badge badge-medium">${medium}</span></td>
+                    <td><span class="badge badge-low">${low}</span></td>
+                    <td>${riskScore}</td>
+                </tr>`;
+            }).join('')}</tbody></table>`;
+        }
+
+        function renderEndpointVulnTable(data, container) {
+            container.innerHTML = `<table><thead><tr>
+                <th>Timestamp</th><th>Environment</th><th>Device</th>
+                <th>Total</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>Risk</th>
+            </tr></thead><tbody>${data.map(record => {
+                const ts = getRecordTimestamp(record);
+                return `<tr>
+                    <td>${ts ? new Date(ts).toLocaleString() : '-'}</td>
+                    <td>${record['deployment.environment'] || '-'}</td>
+                    <td>${record['device.name'] || record['device.id'] || '-'}</td>
+                    <td><strong>${record['vulnerability.total'] || 0}</strong></td>
+                    <td><span class="badge badge-critical">${record['vulnerability.critical'] || 0}</span></td>
+                    <td><span class="badge badge-high">${record['vulnerability.high'] || 0}</span></td>
+                    <td><span class="badge badge-medium">${record['vulnerability.medium'] || 0}</span></td>
+                    <td><span class="badge badge-low">${record['vulnerability.low'] || 0}</span></td>
+                    <td>${record['vulnerability.risk_score'] || 0}</td>
+                </tr>`;
+            }).join('')}</tbody></table>`;
+        }
+
+        function renderEndpointTable(data, container) {
+            container.innerHTML = `<table><thead><tr>
+                <th>Timestamp</th><th>Environment</th><th>Endpoint</th><th>OS</th>
+                <th>Total</th><th>Critical</th><th>High</th><th>Medium</th><th>Low</th><th>Risk</th>
+            </tr></thead><tbody>${data.map(record => {
+                const ts = getRecordTimestamp(record);
+                return `<tr>
+                    <td>${ts ? new Date(ts).toLocaleString() : '-'}</td>
+                    <td>${record['deployment.environment'] || '-'}</td>
+                    <td>${record['endpoint.name'] || '-'}</td>
+                    <td>${record['endpoint.os.name'] || ''} ${record['endpoint.os.version'] || ''}</td>
+                    <td><strong>${record['detections.total'] || 0}</strong></td>
+                    <td><span class="badge badge-critical">${record['detections.critical'] || 0}</span></td>
+                    <td><span class="badge badge-high">${record['detections.high'] || 0}</span></td>
+                    <td><span class="badge badge-medium">${record['detections.medium'] || 0}</span></td>
+                    <td><span class="badge badge-low">${record['detections.low'] || 0}</span></td>
+                    <td>${record['detections.risk_score'] || 0}</td>
+                </tr>`;
+            }).join('')}</tbody></table>`;
+        }
+
+        function exportData(dataType) {
+            const data = filteredData[dataType];
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${dataType}_export.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
         function syntaxHighlight(json) {
             json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
                 let cls = 'json-number';
-                if (/^"/.test(match)) {
-                    if (/:$/.test(match)) {
-                        cls = 'json-key';
-                    } else {
-                        cls = 'json-string';
-                    }
-                } else if (/true|false/.test(match)) {
-                    cls = 'json-boolean';
-                } else if (/null/.test(match)) {
-                    cls = 'json-null';
-                }
+                if (/^"/.test(match)) cls = /:$/.test(match) ? 'json-key' : 'json-string';
+                else if (/true|false/.test(match)) cls = 'json-boolean';
+                else if (/null/.test(match)) cls = 'json-null';
                 return '<span class="' + cls + '">' + match + '</span>';
             });
         }

@@ -41,6 +41,21 @@ Common issues and fixes. Replaces HTTP_500_TROUBLESHOOTING and scattered trouble
 
 ---
 
+## Streamlit dashboard & AEM Gov AU legacy tab
+
+| Symptom | Cause | Fix |
+|--------|--------|-----|
+| Charts stop before May 8 / 15 | **Years** filter missing **2026** (stale session) | Select **2026** in sidebar, or click **Reload data** |
+| May 14 upload “skipped” or no new week | File already processed (SHA-256) or wrong file type | Check **Processed files** ledger; use Splunk `AMSGovCloud_*-2026-05-14.csv` pair |
+| Only one “May” point on Trends | Viewing **monthly** charts, not **weekly** | Use **Trends → Weekly snapshots** (top section) |
+| Export 7 May not labeled 7 May on chart | Thursday export → **Friday** `scan_date` | 7 May export → **8 May 2026** week (by design) |
+| `plotly` import error locally | Missing venv dependency | `pip install -r requirements.txt` or `./scripts/start_dashboard.sh` |
+| Stale hero metrics after upload | Cached dataframe | **Reload data** on Legacy tab |
+
+📚 [AEM_GOVAU_LEGACY_DASHBOARD.md](AEM_GOVAU_LEGACY_DASHBOARD.md)
+
+---
+
 ## General
 
 - **Permission denied** on scripts: `chmod +x script.sh`

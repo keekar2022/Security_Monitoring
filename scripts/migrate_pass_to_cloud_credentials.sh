@@ -29,7 +29,11 @@ fi
 mkdir -p "$OUT_DIR"
 chmod 700 "$OUT_DIR"
 
-mapfile -t ENVIRONMENTS < <(
+# mapfile requires bash 4+; macOS default bash is 3.2
+ENVIRONMENTS=()
+while IFS= read -r _env_line; do
+  [[ -n "$_env_line" ]] && ENVIRONMENTS+=("$_env_line")
+done < <(
   python3 - <<'PY' "$DEPLOYMENT_CONFIG"
 import json, sys
 with open(sys.argv[1], encoding="utf-8") as f:
@@ -96,10 +100,10 @@ for env in "${ENVIRONMENTS[@]}"; do
   echo "${SECRET_NAME} = \"${SAFE_TOKEN}\"" >>"$STREAMLIT_OUT"
   echo "" >>"$STREAMLIT_OUT"
 
-  # GitHub CLI (run set_github_secrets.sh locally — file is chmod 600, gitignored)
+  # GitHub CLI (stdin; --body-file is not available on older gh versions)
   {
     echo "echo \"Setting ${SECRET_NAME}...\""
-    echo "gh secret set \"${SECRET_NAME}\" --repo \"\${GITHUB_REPO:-keekar2022/Security_Monitoring}\" --body-file \"$TOKEN_FILE\""
+    echo "gh secret set \"${SECRET_NAME}\" --repo \"\${GITHUB_REPO:-keekar2022/Security_Monitoring}\" < \"$TOKEN_FILE\""
   } >>"$GITHUB_OUT"
   echo "" >>"$GITHUB_OUT"
 

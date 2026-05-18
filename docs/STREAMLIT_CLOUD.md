@@ -5,7 +5,9 @@ contact: mukesh.kesharwani@adobe.com
 
 # Deploy on Streamlit Community Cloud
 
-Host the vulnerability dashboard at [share.streamlit.io](https://share.streamlit.io/) (same pattern as [Keekar-s-StocksStatus-Dashboard](https://github.com/keekar2022/Keekar-s-StocksStatus-Dashboard)).
+Host **Keekar's Security Monitoring Dashboard** (release **1.0.11**, see [`VERSION`](../VERSION)) at [share.streamlit.io](https://share.streamlit.io/) (same pattern as [Keekar-s-StocksStatus-Dashboard](https://github.com/keekar2022/Keekar-s-StocksStatus-Dashboard)).
+
+**Tabs:** Trend Micro container/endpoint metrics (JSONL from GitHub Actions) and **ServerVulnerabilities-LegacyTool** (AEM Gov AU weekly + Splunk Nexpose — see [AEM_GOVAU_LEGACY_DASHBOARD.md](AEM_GOVAU_LEGACY_DASHBOARD.md)).
 
 ## Publish code to GitHub first (required)
 
@@ -20,7 +22,7 @@ chmod +x scripts/publish_streamlit_github.sh
 ./scripts/publish_streamlit_github.sh
 ```
 
-That script commits the Streamlit app, dashboard package, sample `data/*_metrics.jsonl`, and pushes to `origin` (default: `keekar2022/Security_Monitoring`).
+That script commits the Streamlit app, dashboard package, sample `data/*_metrics.jsonl`, **`data/server_vulnerabilities_legacy/`** (weekly AEM/Splunk metrics), and pushes to `origin` (default: `keekar2022/Security_Monitoring`).
 
 Manual check:
 
@@ -147,3 +149,15 @@ After bootstrap/Okta login → **Platform settings** → **Data collection** tab
 ```
 
 Use **either** GitHub Actions **or** `PUSH_AFTER_COLLECT=true` on NAS — not both pushing to the same branch.
+
+## AEM Gov AU legacy weekly data (v1.0.11+)
+
+Trend Micro collectors **do not** populate `data/server_vulnerabilities_legacy/`. Update that store by:
+
+1. **UI:** Legacy tab → Upload → drag AEM or Splunk CSVs → **Process upload** → **Reload data**.
+2. **CLI:** `scripts/import_aem_govau_scan_reports.py` and/or `scripts/import_splunk_scan_reports.py`.
+3. Commit and push `data/server_vulnerabilities_legacy/` before or with `./scripts/publish_streamlit_github.sh`.
+
+Splunk export dates (Thursday) appear on charts as the **following Friday** scan week. Include **2026** in the sidebar **Years** filter to see recent May weeks.
+
+📚 [AEM_GOVAU_LEGACY_DASHBOARD.md](AEM_GOVAU_LEGACY_DASHBOARD.md) · [CHANGELOG.md](CHANGELOG.md#1011--2026-05-18--aem-gov-au-legacy-dashboard--splunk-ingest)

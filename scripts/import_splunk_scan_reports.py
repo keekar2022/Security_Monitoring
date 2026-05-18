@@ -11,6 +11,8 @@ Usage:
   python3 scripts/import_splunk_scan_reports.py \\
     ~/Downloads/AMSGovCloud_M2-Prod-2026-05-07.csv \\
     ~/Downloads/AMSGovCloud_Cust_SA_Acct-2026-05-07.csv
+
+See docs/AEM_GOVAU_LEGACY_DASHBOARD.md (release 1.0.11).
 """
 
 from __future__ import annotations

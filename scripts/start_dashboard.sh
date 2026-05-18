@@ -2,7 +2,8 @@
 # Concept: Mukesh Kesharwani
 # Contact: mukesh.kesharwani@adobe.com
 #
-# Initialize and start the local Streamlit dashboard (app.py).
+# Initialize and start Keekar's Security Monitoring Dashboard (app.py, v1.0.11+).
+# Legacy AEM/Splunk tab: docs/AEM_GOVAU_LEGACY_DASHBOARD.md
 # Stops any existing Streamlit or static HTTP server for this project first.
 #
 # Usage:

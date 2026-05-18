@@ -55,6 +55,10 @@ Thumbs.db
 # Temporary files
 /tmp/
 *.tmp
+*.upload.tmp
+
+# Legacy Splunk upload temp (metrics dir is committed with mock seed)
+data/server_vulnerabilities_legacy/*.upload.tmp
 
 # Exported pass store for Docker (contains secrets; use export-pass-for-docker.sh to create)
 /pass-export/

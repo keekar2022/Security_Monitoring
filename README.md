@@ -1,6 +1,6 @@
 # Trend Micro Vision One - API Integration Suite
 
-**Version:** 6.0.0 | **Last Updated:** 2026-02-02 | **Status:** ✅ Production Ready  
+**Platform version:** 6.0.0 | **Dashboard version:** 1.0.11 (`VERSION`) | **Last Updated:** 2026-05-18  
 **Author:** Mukesh Kesharwani (mkesharw@adobe.com)
 
 ---
@@ -30,6 +30,7 @@
 - **🔑 Secure Credential Management**: Integration with `pass` (Unix password manager)
 - **📈 OpenTelemetry Compliance**: Structured logging ready for Grafana/Loki
 - **⏱️ Time-Series Metrics**: JSONL format for historical tracking
+- **📊 Streamlit Dashboard (v1.0.11)**: **Keekar's Security Monitoring Dashboard** — Trend Micro tabs plus **AEM Gov AU legacy** weekly trends (M2/SA/EKS), Splunk Nexpose upload, multi-file drag-and-drop
 
 ---
 
@@ -66,8 +67,17 @@ Integration-API-Dev/
 │   ├── Makefile                           # Build automation
 │   └── README.md                          # Go-specific documentation
 │
+├── app.py                                 # Streamlit dashboard (Keekar's Security Monitoring)
+├── monitoring_dashboard/                  # Dashboard UI, auth, legacy AEM/Splunk parsers
+├── data/server_vulnerabilities_legacy/    # Weekly AEM Gov AU + Splunk metrics (JSONL)
+├── scripts/
+│   ├── start_dashboard.sh                # Local Streamlit
+│   ├── import_aem_govau_scan_reports.py  # Bulk AEM CSV import
+│   └── import_splunk_scan_reports.py     # Splunk Nexpose weekly import
 ├── docs/                                  # 📚 Complete Documentation
 │   ├── INDEX.md                          # Documentation index (start here)
+│   ├── AEM_GOVAU_LEGACY_DASHBOARD.md     # Legacy tab, Splunk upload, v1.0.11
+│   ├── STREAMLIT_CLOUD.md                # Community Cloud deploy
 │   ├── FEATURES.md                       # Container & endpoint scanning
 │   ├── CONFIGURATION.md                  # Configuration reference
 │   ├── PASS_AND_CREDENTIALS.md           # Pass & credential storage
@@ -126,6 +136,25 @@ make build
 # Start API server
 ./go/bin/api-server --port 8080 --data-dir .
 ```
+
+### Streamlit dashboard (v1.0.11)
+
+**Keekar's Security Monitoring Dashboard** — Trend Micro JSONL tabs plus **AEM Gov AU legacy** weekly trends (Splunk/AEM upload).
+
+```bash
+./scripts/start_dashboard.sh
+# http://localhost:8501/ → ServerVulnerabilities-LegacyTool (first tab)
+```
+
+Import Splunk Nexpose weekly CSVs:
+
+```bash
+python3 scripts/import_splunk_scan_reports.py \
+  ~/Downloads/AMSGovCloud_M2-Prod-2026-05-14.csv \
+  ~/Downloads/AMSGovCloud_Cust_SA_Acct-2026-05-14.csv
+```
+
+📚 [AEM Gov AU Legacy Dashboard](docs/AEM_GOVAU_LEGACY_DASHBOARD.md) · [Streamlit Cloud](docs/STREAMLIT_CLOUD.md) · [CHANGELOG 1.0.11](docs/CHANGELOG.md#1011--2026-05-18--aem-gov-au-legacy-dashboard--splunk-ingest)
 
 ### Docker (Mac & Windows)
 
@@ -444,6 +473,9 @@ WantedBy=multi-user.target
 | [Configuration](docs/CONFIGURATION.md) | Config reference |
 | [Pass & Credentials](docs/PASS_AND_CREDENTIALS.md) | Credential storage |
 | [Features](docs/FEATURES.md) | Container & endpoint scanning |
+| [AEM Gov AU Legacy Dashboard](docs/AEM_GOVAU_LEGACY_DASHBOARD.md) | Weekly M2/SA/EKS trends, Splunk upload (v1.0.11) |
+| [Streamlit Cloud](docs/STREAMLIT_CLOUD.md) | Deploy dashboard to Community Cloud |
+| [Changelog](docs/CHANGELOG.md) | Version 1.1.0 |
 
 ---
 
@@ -531,4 +563,4 @@ cd /Users/mkesharw/Documents/Integration-API-Dev
 
 ---
 
-**Last Updated:** 2026-02-02 | **Version:** 6.0.0
+**Last Updated:** 2026-05-18 | **Platform:** 6.0.0 | **Dashboard:** 1.0.11

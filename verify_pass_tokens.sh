@@ -32,7 +32,7 @@ fi
 echo "Checking token storage for all environments..."
 echo ""
 
-ENVIRONMENTS=("production" "production_au")
+ENVIRONMENTS=("production" "production_au" "quality_test" "AMS_QTE")
 ISSUE_COUNT=0
 SUCCESS_COUNT=0
 

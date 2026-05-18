@@ -55,6 +55,23 @@
       "log_level": "info",
       "log_file": "~/.trend_micro_api_quality_test.jsonl",
       "rate_limit_enabled": true
+    },
+    "AMS_QTE": {
+      "name": "AMS QTE - Adobe Managed Services",
+      "environment_label": "AMS QTE",
+      "region": "au",
+      "region_name": "Australia",
+      "api_base_url": "https://api.au.xdr.trendmicro.com",
+      "portal_url": "https://portal.au.xdr.trendmicro.com/",
+      "business_id": "FROM_PASS",
+      "business_name": "Adobe Managed Services QTE (AMS_QTE)",
+      "timeout": 30,
+      "retry_attempts": 3,
+      "retry_delay": 5,
+      "verify_ssl": true,
+      "log_level": "info",
+      "log_file": "~/.trend_micro_api_ams_qte.jsonl",
+      "rate_limit_enabled": true
     }
   },
   "region_endpoints": {

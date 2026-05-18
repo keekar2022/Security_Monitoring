@@ -2,6 +2,27 @@
 
 Get started with the multi-language implementations of Trend Micro Vision One API integration tools in minutes.
 
+**Dashboard release 1.0.11:** For the Streamlit **Keekar's Security Monitoring Dashboard** and AEM Gov AU legacy tab, see [AEM_GOVAU_LEGACY_DASHBOARD.md](AEM_GOVAU_LEGACY_DASHBOARD.md).
+
+## Streamlit dashboard (optional)
+
+```bash
+./scripts/start_dashboard.sh
+# Open http://localhost:8501/
+```
+
+| Task | Command / location |
+|------|-------------------|
+| Legacy weekly trends | Tab **ServerVulnerabilities-LegacyTool** |
+| Upload Splunk/AEM CSVs | Legacy → **Upload** (multi-file drag-and-drop) |
+| Import Splunk CLI | `python3 scripts/import_splunk_scan_reports.py` … |
+| Import AEM bulk CLI | `python3 scripts/import_aem_govau_scan_reports.py` … |
+| Deploy to Cloud | [STREAMLIT_CLOUD.md](STREAMLIT_CLOUD.md) |
+
+After uploads, click **Reload data**. Include **2026** in **Years** if May weeks are missing.
+
+---
+
 ## Choose Your Language
 
 - **Python** - Original implementation, easiest to modify

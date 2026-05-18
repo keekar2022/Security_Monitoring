@@ -94,6 +94,36 @@
         "valid_for_days": 0,
         "status": "active"
       }
+    },
+    "AMS_QTE": {
+      "deployment": {
+        "business_name": "Adobe Managed Services QTE (AMS_QTE)",
+        "business_id": "FROM_PASS",
+        "region": "au",
+        "region_name": "Australia",
+        "portal_url": "https://portal.au.xdr.trendmicro.com/",
+        "api_base_url": "https://api.au.xdr.trendmicro.com"
+      },
+      "api_credentials": {
+        "api_token": "STORED_IN_PASS_VAULT",
+        "token_type": "Bearer",
+        "issued_at": 0,
+        "expires_at": 0,
+        "token_use": "customer"
+      },
+      "token_info": {
+        "decoded": {
+          "cid": "FROM_PASS",
+          "cpid": "svp",
+          "ppid": "cus",
+          "id": "ams-qte-token",
+          "tokenUse": "customer"
+        },
+        "issued_date": "",
+        "expiry_date": "",
+        "valid_for_days": 0,
+        "status": "active"
+      }
     }
   },
   "security": {
@@ -113,6 +143,7 @@
     "production: Adobe-AMS-Global (US/Global region)",
     "production_au: Adobe-MS-Au (Australia region)",
     "quality_test: Adobe Managed Services QTE (Australia) - store token in pass: TrendMicro/quality_test/api_token",
+    "AMS_QTE: store api_base_url, api_token, business_id in pass: TrendMicro/AMS_QTE/",
     "Current active environment: production",
     "Token expiry dates: production (2027-01-19), production_au (2027-01-21)",
     "Rotate tokens every 90 days as per best practices",

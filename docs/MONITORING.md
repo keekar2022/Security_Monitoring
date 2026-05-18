@@ -29,6 +29,7 @@ Tools and the API server use structured (JSON) logs with OpenTelemetry-style att
 - **JSONL outputs** from the Go tools (`*_metrics.jsonl`) follow a consistent structure; you can define Loki labels (e.g. environment, aggregation level) and build dashboards.
 - **Promtail**: Example config in `config/promtail-config.yaml`; point it at your JSONL or log directories and ship to Loki.
 - **Dashboards**: Use `config/grafana-dashboard-container-security.json` as a starting point for container security metrics.
+- **Streamlit (v1.0.11)**: **Keekar's Security Monitoring Dashboard** (`app.py`) displays Trend Micro JSONL and AEM Gov AU weekly legacy metrics (`data/server_vulnerabilities_legacy/`). Not a substitute for Grafana; see [AEM_GOVAU_LEGACY_DASHBOARD.md](AEM_GOVAU_LEGACY_DASHBOARD.md).
 
 ---
 

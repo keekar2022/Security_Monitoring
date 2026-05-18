@@ -33,13 +33,19 @@ FILES=(
   app.py
   requirements.txt
   monitoring_dashboard
+  monitoring_dashboard/server_vuln_legacy
+  config/collection_schedule.json
+  config/collection_schedule.json.example
+  config/server_vuln_legacy_columns.json
+  config/server_vuln_legacy_columns.json.example
+  data/server_vulnerabilities_legacy
   .streamlit/config.toml
   .streamlit/secrets.toml.example
   .env.example
   config/auth_config.json.example
-  config/collection_schedule.json
-  config/collection_schedule.json.example
   docs/STREAMLIT_CLOUD.md
+  docs/AEM_GOVAU_LEGACY_DASHBOARD.md
+  docs/CHANGELOG.md
   scripts/start_dashboard.sh
   scripts/publish_streamlit_github.sh
   scripts/run_scheduled_collect.sh
@@ -56,10 +62,10 @@ if git diff --cached --quiet; then
   echo "Nothing new to commit (Streamlit files already staged/committed)."
 else
   git commit -m "$(cat <<EOF
-feat: add Streamlit vulnerability dashboard for Community Cloud
+docs: publish Streamlit dashboard and legacy weekly metrics (v1.0.11)
 
-Publish app.py, monitoring_dashboard package, and sample JSONL metrics so
-share.streamlit.io and streamlit deploy can link this branch on GitHub.
+Includes app.py, monitoring_dashboard, Trend Micro JSONL samples, and
+data/server_vulnerabilities_legacy for AEM Gov AU / Splunk weekly trends.
 EOF
 )"
 fi

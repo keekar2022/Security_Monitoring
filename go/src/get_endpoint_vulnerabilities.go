@@ -73,6 +73,8 @@ func main() {
 	overwrite := flag.Bool("overwrite", false, "Overwrite output files instead of appending (default: append)")
 	quiet := flag.Bool("quiet", false, "Suppress progress messages")
 	setupHelp := flag.Bool("setup-help", false, "Show setup instructions")
+	top := flag.Int("top", 100, "Max results per API page (default: 100)")
+	lookbackDays := flag.Int("lookback-days", 0, "Only include vulnerabilities from the last N days (0 = no date filter)")
 
 	flag.Parse()
 
@@ -178,7 +180,7 @@ func main() {
 				}
 
 				if deviceID != "" {
-					vulns, err := fetchVulnerabilitiesForDevice(config, env, deviceID, deviceName, !*quiet)
+					vulns, err := fetchVulnerabilitiesForDevice(config, env, deviceID, deviceName, !*quiet, *top, *lookbackDays)
 					if err == nil {
 						deviceVulns[deviceID] = vulns
 					}
@@ -390,7 +392,7 @@ func fetchAllDevices(config *lib.TrendMicroConfig, env string, verbose bool) ([]
 
 // fetchVulnerabilitiesForDevice uses Get CVEs detected in a device (per UMA / current API docs):
 // V3.0: GET /v3.0/asrm/vulnerableDevices with TMV1-Filter: id eq '<deviceID>' in header.
-func fetchVulnerabilitiesForDevice(config *lib.TrendMicroConfig, env string, deviceID string, deviceName string, verbose bool) ([]*DeviceVulnerability, error) {
+func fetchVulnerabilitiesForDevice(config *lib.TrendMicroConfig, env string, deviceID string, deviceName string, verbose bool, top int, lookbackDays int) ([]*DeviceVulnerability, error) {
 	baseURL, err := config.GetAPIBaseURL(env)
 	if err != nil {
 		return nil, err
@@ -404,15 +406,25 @@ func fetchVulnerabilitiesForDevice(config *lib.TrendMicroConfig, env string, dev
 	endpoint := "/v3.0/asrm/vulnerableDevices"
 	url := baseURL + endpoint
 
+	// ASRM vulnerableDevices API does not support firstDetectedDateTime in TMV1-Filter;
+	// filtering by date returns empty. Use only device id filter. top and lookbackDays
+	// are kept for CLI consistency; lookback-days applies to container scan only.
+	if top <= 0 {
+		top = 100
+	}
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	q := req.URL.Query()
+	q.Add("top", fmt.Sprintf("%d", top))
+	req.URL.RawQuery = q.Encode()
+
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
-	// Filter by device id per API docs (TMV1-Filter header)
 	req.Header.Set("TMV1-Filter", fmt.Sprintf("id eq '%s'", deviceID))
 
 	client := &http.Client{Timeout: 60 * time.Second}

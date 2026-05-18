@@ -79,6 +79,8 @@ func main() {
 	noCSV := flag.Bool("no-csv", false, "Disable CSV generation")
 	noTxt := flag.Bool("no-txt", false, "Disable TXT report generation")
 	overwrite := flag.Bool("overwrite", false, "Overwrite output files instead of appending (default: append)")
+	top := flag.Int("top", 50, "Max results per API page (default: 50; API cap is 50)")
+	lookbackDays := flag.Int("lookback-days", 0, "Only include vulnerabilities from the last N days (0 = no date filter)")
 
 	flag.Parse()
 
@@ -209,7 +211,7 @@ func main() {
 			groupResults[groupKey].Clusters = append(groupResults[groupKey].Clusters, cluster)
 
 			// Fetch vulnerabilities for this cluster
-			vulns, err := fetchVulnerabilitiesForCluster(config, env, cluster, !*quiet)
+			vulns, err := fetchVulnerabilitiesForCluster(config, env, cluster, !*quiet, *top, *lookbackDays)
 			if err != nil {
 				logger.Error("Failed to fetch vulnerabilities",
 					slog.String("cluster_id", cluster.ID),
@@ -349,7 +351,7 @@ func fetchAllClusters(config *lib.TrendMicroConfig, env string, verbose bool) ([
 	return response.Items, nil
 }
 
-func fetchVulnerabilitiesForCluster(config *lib.TrendMicroConfig, env string, cluster *ClusterInfo, verbose bool) ([]*ContainerVulnerability, error) {
+func fetchVulnerabilitiesForCluster(config *lib.TrendMicroConfig, env string, cluster *ClusterInfo, verbose bool, top int, lookbackDays int) ([]*ContainerVulnerability, error) {
 	baseURL, err := config.GetAPIBaseURL(env)
 	if err != nil {
 		return nil, err
@@ -361,8 +363,12 @@ func fetchVulnerabilitiesForCluster(config *lib.TrendMicroConfig, env string, cl
 		return nil, err
 	}
 
-	// Add cluster filter
+	// Container Security API rejects TMV1-Filter with firstDetectedDateTime; use only clusterId.
 	headers["TMV1-Filter"] = fmt.Sprintf("clusterId eq '%s'", cluster.ID)
+	var since time.Time
+	if lookbackDays > 0 {
+		since = time.Now().UTC().AddDate(0, 0, -lookbackDays)
+	}
 
 	if verbose {
 		fmt.Printf("  • %s: ", cluster.Name)
@@ -373,8 +379,14 @@ func fetchVulnerabilitiesForCluster(config *lib.TrendMicroConfig, env string, cl
 		return nil, err
 	}
 
+	if top <= 0 {
+		top = 50
+	}
+	if top > 50 {
+		top = 50
+	}
 	q := req.URL.Query()
-	q.Add("top", "50")
+	q.Add("top", fmt.Sprintf("%d", top))
 	q.Add("orderBy", "firstDetectedDateTime desc")
 	req.URL.RawQuery = q.Encode()
 
@@ -506,6 +518,33 @@ func fetchVulnerabilitiesForCluster(config *lib.TrendMicroConfig, env string, cl
 			pagesInfo += " (limit reached)"
 		}
 		fmt.Printf(" - Total: %d vulnerabilities%s\n", len(vulns), pagesInfo)
+	}
+
+	// Filter by lookback-days client-side (API does not support firstDetectedDateTime in filter)
+	if lookbackDays > 0 && !since.IsZero() {
+		origLen := len(vulns)
+		filtered := vulns[:0]
+		for _, v := range vulns {
+			if v.FirstDetected == "" {
+				filtered = append(filtered, v)
+				continue
+			}
+			t, err := time.Parse(time.RFC3339, v.FirstDetected)
+			if err != nil && len(v.FirstDetected) >= 10 {
+				t, err = time.Parse("2006-01-02", v.FirstDetected[:10])
+			}
+			if err != nil {
+				filtered = append(filtered, v)
+				continue
+			}
+			if !t.Before(since) {
+				filtered = append(filtered, v)
+			}
+		}
+		vulns = filtered
+		if verbose && len(vulns) != origLen {
+			fmt.Printf("  (filtered to last %d days: %d)\n", lookbackDays, len(vulns))
+		}
 	}
 
 	return vulns, nil

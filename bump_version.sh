@@ -25,8 +25,12 @@ if [[ ! -f "VERSION" ]]; then
     exit 1
 fi
 
-source <(grep = VERSION)
-CURRENT_VERSION="$VERSION"
+# Do not `source` VERSION — values like PROJECT_NAME contain unquoted spaces on macOS.
+CURRENT_VERSION="$(grep -E '^VERSION=' VERSION | head -1 | cut -d= -f2- | tr -d '[:space:]')"
+if [[ -z "$CURRENT_VERSION" ]]; then
+    echo -e "${RED}ERROR: VERSION= not found in VERSION file${NC}" >&2
+    exit 1
+fi
 
 # Functions
 usage() {
@@ -118,15 +122,40 @@ update_version_file() {
     log_info "✓ VERSION file updated"
 }
 
+update_monitoring_dashboard_version() {
+    local new_version="$1"
+    if [[ -f monitoring_dashboard/__init__.py ]]; then
+        log_info "Updating monitoring_dashboard/__init__.py"
+        sed -i.bak "s/^__version__ = .*/__version__ = \"$new_version\"/" monitoring_dashboard/__init__.py
+        rm -f monitoring_dashboard/__init__.py.bak
+        log_info "✓ monitoring_dashboard/__init__.py updated"
+    fi
+    if [[ -f scripts/write_version.py ]]; then
+        if command -v python3 >/dev/null 2>&1; then
+            python3 scripts/write_version.py || log_warning "write_version.py failed (non-fatal)"
+        fi
+    fi
+}
+
+_changelog_file() {
+    if [[ -f docs/CHANGELOG.md ]]; then
+        echo "docs/CHANGELOG.md"
+    else
+        echo "CHANGELOG.md"
+    fi
+}
+
 update_changelog() {
     local new_version="$1"
     local message="$2"
     local date=$(date +%Y-%m-%d)
-    
-    log_info "Updating CHANGELOG.md"
-    
-    if [[ ! -f "CHANGELOG.md" ]]; then
-        cat > CHANGELOG.md << EOF
+    local changelog
+    changelog="$(_changelog_file)"
+
+    log_info "Updating $changelog"
+
+    if [[ ! -f "$changelog" ]]; then
+        cat > "$changelog" << EOF
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -146,14 +175,14 @@ $message
     
     # Insert after header (after first 5 lines)
     {
-        head -n 5 CHANGELOG.md
+        head -n 5 "$changelog"
         echo "$entry"
-        tail -n +6 CHANGELOG.md
-    } > CHANGELOG.md.tmp
-    
-    mv CHANGELOG.md.tmp CHANGELOG.md
-    
-    log_info "✓ CHANGELOG.md updated"
+        tail -n +6 "$changelog"
+    } > "${changelog}.tmp"
+
+    mv "${changelog}.tmp" "$changelog"
+
+    log_info "✓ $changelog updated"
 }
 
 update_readme() {
@@ -187,7 +216,7 @@ create_git_commit() {
     fi
     
     # Add changed files
-    git add VERSION CHANGELOG.md README.md 2>/dev/null || true
+    git add VERSION CHANGELOG.md docs/CHANGELOG.md README.md monitoring_dashboard/__init__.py monitoring_dashboard/_version.py 2>/dev/null || true
     
     # Create commit
     local commit_msg
@@ -286,6 +315,7 @@ main() {
     
     # Execute updates
     update_version_file "$new_version"
+    update_monitoring_dashboard_version "$new_version"
     update_changelog "$new_version" "$message"
     update_readme "$new_version"
     create_git_commit "$new_version" "$message" "$bump_type"

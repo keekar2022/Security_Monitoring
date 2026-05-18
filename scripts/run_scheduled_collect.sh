@@ -30,7 +30,10 @@ for f in \
   fi
 done
 
-mapfile -t ENVIRONMENTS < <(
+ENVIRONMENTS=()
+while IFS= read -r _env_line; do
+  [[ -n "$_env_line" ]] && ENVIRONMENTS+=("$_env_line")
+done < <(
   "$PYTHON" - <<'PY'
 from monitoring_dashboard.collection_schedule import list_credentialed_environments
 for e in list_credentialed_environments():

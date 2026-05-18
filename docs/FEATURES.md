@@ -79,6 +79,45 @@ docker compose run --rm --entrypoint /app/get_endpoint_vulnerabilities api --env
 
 ---
 
+## 4. Streamlit Dashboard — AEM Gov AU Legacy (v1.0.11)
+
+**App:** `app.py` — **Keekar's Security Monitoring Dashboard**  
+**Tab:** **ServerVulnerabilities-LegacyTool** (weekly M2 / SA / EKS trends, 2022–2026)
+
+### What it does
+
+- Visualizes **AEM Gov AU Vulnerability Scanning Report** weekly aggregates and **Splunk Nexpose** CSV exports.
+- **Drag-and-drop multi-file upload** on the Legacy → Upload tab.
+- **Weekly** trend charts (each scan week, e.g. 8 May and 15 May 2026) plus **monthly** year-comparison charts.
+
+### Quick start
+
+```bash
+./scripts/start_dashboard.sh
+# http://localhost:8501/ → ServerVulnerabilities-LegacyTool
+```
+
+### Import data (CLI)
+
+```bash
+# Historical AEM spreadsheets (2022–2026)
+python3 scripts/import_aem_govau_scan_reports.py ~/Downloads/202*-AEMGovAu-*.csv
+
+# Weekly Splunk Nexpose (M2 + SA for same week)
+python3 scripts/import_splunk_scan_reports.py \
+  ~/Downloads/AMSGovCloud_M2-Prod-2026-05-14.csv \
+  ~/Downloads/AMSGovCloud_Cust_SA_Acct-2026-05-14.csv
+```
+
+### Data location
+
+- `data/server_vulnerabilities_legacy/weekly_metrics.jsonl`
+- `data/server_vulnerabilities_legacy/meta.json`
+
+📚 **Full reference:** [AEM_GOVAU_LEGACY_DASHBOARD.md](AEM_GOVAU_LEGACY_DASHBOARD.md) · Deploy: [STREAMLIT_CLOUD.md](STREAMLIT_CLOUD.md)
+
+---
+
 ## API Permissions for Endpoint Vulnerabilities
 
 If you get permission errors on endpoint/device APIs:

@@ -11,7 +11,8 @@ services:
     image: monitoring-api:latest
     container_name: monitoring-api
     ports:
-      - "8080:8080"
+      - "8080:8080"   # static: data/jsonl_viewer.html and JSONL files
+      - "8081:8081"   # API
     volumes:
       - ./config:/app/config
       - ./data:/app/data
