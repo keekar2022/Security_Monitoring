@@ -1,7 +1,7 @@
 # Concept: Mukesh Kesharwani
 # Contact: mukesh.kesharwani@adobe.com
 
-"""ServerVulnerabilities-LegacyTool tab — AEM Gov AU weekly scanning trends (2022–2026)."""
+"""Server Vulnerabilities-Legacy Tool tab — AEM Gov AU weekly scanning trends (2022–2026)."""
 
 from __future__ import annotations
 

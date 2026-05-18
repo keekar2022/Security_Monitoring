@@ -134,6 +134,7 @@ def write_meta_after_success(
     duration_seconds: float,
     trigger: str,
     frequency: str | None = None,
+    failed_environments: list[str] | None = None,
 ) -> None:
     policy = load_policy()
     meta = {
@@ -143,6 +144,9 @@ def write_meta_after_success(
         "duration_seconds": round(duration_seconds, 2),
         "trigger": trigger,
     }
+    if failed_environments:
+        meta["failed_environments"] = failed_environments
+        meta["partial"] = True
     META_PATH.parent.mkdir(parents=True, exist_ok=True)
     with META_PATH.open("w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)

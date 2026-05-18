@@ -19,6 +19,7 @@ from monitoring_dashboard.collection_schedule import (
     load_policy,
     next_due_at,
 )
+from monitoring_dashboard.runtime_env import is_streamlit_community_cloud
 
 GITHUB_REPO_DEFAULT = "keekar2022/Security_Monitoring"
 WORKFLOW_FILE = "collect-metrics.yml"
@@ -64,12 +65,31 @@ def _trigger_github_workflow(force: bool = True) -> tuple[bool, str]:
         return False, f"Request failed: {exc}"
 
 
+def _has_workflow_dispatch_token() -> bool:
+    return bool(
+        (os.environ.get("WORKFLOW_DISPATCH_TOKEN") or "").strip()
+        or (os.environ.get("GITHUB_TOKEN") or "").strip()
+    )
+
+
 def render_collection_tab() -> None:
     st.markdown("### Data collection")
     st.caption(
         "Collectors run on **GitHub Actions** or **NAS/local cron**, not inside Streamlit Cloud. "
         "Updated JSONL is pushed to `data/` in GitHub; this app reads those files."
     )
+
+    if is_streamlit_community_cloud():
+        st.info(
+            "This Streamlit app **displays** metrics only. Trend Micro collection runs in "
+            "**GitHub Actions** on `keekar2022/Security_Monitoring`. "
+            "If charts are stale, check Actions or use **Run now** below."
+        )
+        if not _has_workflow_dispatch_token():
+            st.caption(
+                "Add `WORKFLOW_DISPATCH_TOKEN` (GitHub PAT with `workflow` scope) to Streamlit Secrets "
+                "to enable **Run now (force)** from this page."
+            )
 
     policy = load_policy()
     meta = load_meta()
@@ -92,8 +112,20 @@ def render_collection_tab() -> None:
     envs = meta.get("environments") or list_credentialed_environments()
     if envs:
         st.markdown("**Environments:** " + ", ".join(envs))
+    if meta.get("failed_environments"):
+        st.warning(
+            "Last run was **partial**: failed environments — "
+            + ", ".join(str(e) for e in meta.get("failed_environments", []))
+            + ". Check GitHub Actions logs or Trend Micro API role permissions."
+        )
     if meta.get("trigger"):
         st.caption(f"Last trigger: {meta.get('trigger')} · duration: {meta.get('duration_seconds', '—')}s")
+    elif is_streamlit_community_cloud() and not last:
+        st.warning(
+            "No successful collection recorded in `data/collection_meta.json` on this branch. "
+            "Set GitHub repository secrets (`TRENDMICRO_*_API_TOKEN`) and run "
+            "**Actions → Collect security metrics** with `force=true`."
+        )
 
     st.markdown("#### Run collection")
     col_a, col_b = st.columns(2)

@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import os
 
+from monitoring_dashboard.okta_oidc import normalize_domain
+
 _SECRET_KEYS = (
     "SETTINGS_ADMIN_USER",
     "SETTINGS_ADMIN_PASSWORD",
@@ -41,6 +43,8 @@ def _set_from_mapping(mapping: object) -> None:
     for key, value in mapping.items():
         if _should_apply_key(key) and value is not None:
             text = str(value).strip()
+            if key == "OKTA_DOMAIN" and text:
+                text = normalize_domain(text)
             if text and not (os.environ.get(key) or "").strip():
                 os.environ[key] = text
 

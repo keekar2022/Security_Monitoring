@@ -143,7 +143,7 @@ make build
 
 ```bash
 ./scripts/start_dashboard.sh
-# http://localhost:8501/ → ServerVulnerabilities-LegacyTool (first tab)
+# http://localhost:8501/ → Server Vulnerabilities-Legacy Tool (first tab)
 ```
 
 Import Splunk Nexpose weekly CSVs:

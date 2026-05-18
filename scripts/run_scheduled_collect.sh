@@ -75,6 +75,9 @@ START_TS=$(date +%s)
 echo "Starting collection for environments: ${ENVIRONMENTS[*]}"
 echo "USE_PASS=$USE_PASS DATA_DIR=$DATA_DIR trigger=$TRIGGER"
 
+SUCCEEDED_ENVS=()
+FAILED_ENVS=()
+
 for env in "${ENVIRONMENTS[@]}"; do
   echo "=== Environment: $env ==="
   (
@@ -94,25 +97,38 @@ for env in "${ENVIRONMENTS[@]}"; do
   wait "$PID2" || FAIL=1
   wait "$PID3" || FAIL=1
   if [[ "$FAIL" -ne 0 ]]; then
-    die "One or more collectors failed for environment $env"
+    echo "WARNING: One or more collectors failed for environment $env (continuing with other environments)"
+    FAILED_ENVS+=("$env")
+  else
+    SUCCEEDED_ENVS+=("$env")
   fi
 done
+
+if [[ ${#SUCCEEDED_ENVS[@]} -eq 0 ]]; then
+  die "All environments failed: ${FAILED_ENVS[*]:-none}"
+fi
+if [[ ${#FAILED_ENVS[@]} -gt 0 ]]; then
+  echo "Partial success: ok=[${SUCCEEDED_ENVS[*]}] failed=[${FAILED_ENVS[*]}]"
+fi
 
 END_TS=$(date +%s)
 DURATION=$((END_TS - START_TS))
 
 export COLLECTION_TRIGGER="$TRIGGER"
 export COLLECTION_DURATION="$DURATION"
-export COLLECTION_ENV_LIST="${ENVIRONMENTS[*]}"
+export COLLECTION_ENV_LIST="${SUCCEEDED_ENVS[*]}"
+export COLLECTION_FAILED_ENV_LIST="${FAILED_ENVS[*]}"
 "$PYTHON" - <<'PY'
 import os
 from monitoring_dashboard.collection_schedule import write_meta_after_success
 
 envs = [e for e in os.environ.get("COLLECTION_ENV_LIST", "").split() if e]
+failed = [e for e in os.environ.get("COLLECTION_FAILED_ENV_LIST", "").split() if e]
 write_meta_after_success(
     environments=envs,
     duration_seconds=float(os.environ.get("COLLECTION_DURATION", "0")),
     trigger=os.environ.get("COLLECTION_TRIGGER", "local"),
+    failed_environments=failed or None,
 )
 print("Wrote collection_meta.json")
 PY

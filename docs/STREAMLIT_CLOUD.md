@@ -7,7 +7,7 @@ contact: mukesh.kesharwani@adobe.com
 
 Host **Keekar's Security Monitoring Dashboard** (release **1.0.11**, see [`VERSION`](../VERSION)) at [share.streamlit.io](https://share.streamlit.io/) (same pattern as [Keekar-s-StocksStatus-Dashboard](https://github.com/keekar2022/Keekar-s-StocksStatus-Dashboard)).
 
-**Tabs:** Trend Micro container/endpoint metrics (JSONL from GitHub Actions) and **ServerVulnerabilities-LegacyTool** (AEM Gov AU weekly + Splunk Nexpose — see [AEM_GOVAU_LEGACY_DASHBOARD.md](AEM_GOVAU_LEGACY_DASHBOARD.md)).
+**Tabs:** Trend Micro container/endpoint metrics (JSONL from GitHub Actions) and **Server Vulnerabilities-Legacy Tool** (AEM Gov AU weekly + Splunk Nexpose — see [AEM_GOVAU_LEGACY_DASHBOARD.md](AEM_GOVAU_LEGACY_DASHBOARD.md)).
 
 ## Publish code to GitHub first (required)
 
@@ -56,14 +56,16 @@ streamlit deploy app.py
 2. Paste (replace placeholders) — match [`.streamlit/secrets.toml.example`](../.streamlit/secrets.toml.example):
 
 ```toml
-OKTA_DOMAIN = "your-org.okta.com"
+OKTA_DOMAIN = "aemgovau.oktapreview.com"
 OKTA_CLIENT_ID = "your_client_id"
 OKTA_CLIENT_SECRET = "your_client_secret"
 OKTA_AUTH_SERVER_ID = "default"
 OKTA_SCOPE = "openid profile email"
-OKTA_REDIRECT_URI = "https://YOUR-APP-NAME.streamlit.app/"
-STREAMLIT_APP_URL = "https://YOUR-APP-NAME.streamlit.app/"
+OKTA_REDIRECT_URI = "https://aemgovau-secmon.streamlit.app/"
+STREAMLIT_APP_URL = "https://aemgovau-secmon.streamlit.app/"
 ```
+
+Use **host only** for `OKTA_DOMAIN` (no `https://`). The app strips a protocol if present.
 
 3. **Save** Secrets and **Reboot** the app. In **Platform settings → SSO Integration**, you should see a green banner: *loaded from environment / Streamlit Secrets*.
 
@@ -87,6 +89,9 @@ Copy from [`.streamlit/secrets.toml.example`](../.streamlit/secrets.toml.example
 | `OKTA_AUTH_SERVER_ID` | Optional, e.g. `default` |
 | `OKTA_REDIRECT_URI` | **Required on Cloud** — e.g. `https://aemgovau-secmon.streamlit.app/` |
 | `STREAMLIT_APP_URL` | Same as redirect URI (optional if redirect is set) |
+| `WORKFLOW_DISPATCH_TOKEN` | GitHub PAT with `workflow` scope — **Run now** from Data collection tab |
+| `GITHUB_REPO` | Default `keekar2022/Security_Monitoring` |
+| `GITHUB_REF` | Branch for workflow dispatch (default `main`) |
 
 ## Okta application URLs
 
@@ -102,6 +107,25 @@ For app URL `https://YOUR-APP-NAME.streamlit.app/`:
 Until Okta is configured, the app shows the **Settings** page after bootstrap login (`SETTINGS_ADMIN_*`).
 
 After OIDC is saved, users **Sign in with Okta** to reach the dashboard.
+
+### Okta "refused to connect" troubleshooting
+
+Sign-in redirects the **browser** to Okta (not an iframe). If you see `aemgovau.oktapreview.com refused to connect`:
+
+1. From the same network as users, open the discovery URL in a browser (should return JSON):
+   - `https://aemgovau.oktapreview.com/oauth2/default/.well-known/openid-configuration`
+2. Confirm **Streamlit Secrets** and **Okta Admin** use `https://aemgovau-secmon.streamlit.app/` (trailing slash).
+3. **Reboot** the app after changing Secrets.
+4. If Preview Okta is blocked on your network, use a **production** Okta org in Secrets and register the same Streamlit callback there.
+
+Preflight from your laptop:
+
+```bash
+chmod +x scripts/verify_cloud_setup.sh
+./scripts/verify_cloud_setup.sh aemgovau.oktapreview.com default
+```
+
+The login page and **Settings → Test connection** list discovery URLs and HTTP status when checks fail.
 
 ## Local development
 
@@ -176,6 +200,25 @@ After bootstrap/Okta login → **Platform settings** → **Data collection** tab
 ```
 
 Use **either** GitHub Actions **or** `PUSH_AFTER_COLLECT=true` on NAS — not both pushing to the same branch.
+
+Verify collection setup:
+
+```bash
+./scripts/verify_cloud_setup.sh
+# With gh CLI: lists recent collect-metrics workflow runs
+```
+
+## Hosting on AWS (Lambda / EC2)
+
+**Recommended default:** keep **Streamlit Community Cloud** for the UI and **GitHub Actions** for collectors (~$0 on free tiers, no app refactor).
+
+| Option | When to use |
+|--------|-------------|
+| **GitHub Actions + Streamlit Cloud** | Public internet can reach Trend Micro and Okta (current setup) |
+| **EC2 + cron** | Optional backup collector — run `./scripts/run_scheduled_collect.sh` on a small instance; same script as GHA |
+| **Lambda + EventBridge** | Only if serverless is mandatory — requires packaging Go collectors and new data storage (S3 or GitHub API); not a small change |
+
+Do **not** run collectors inside Streamlit Cloud; the **Data collection** tab triggers GitHub Actions or shows setup steps.
 
 ## AEM Gov AU legacy weekly data (v1.0.11+)
 

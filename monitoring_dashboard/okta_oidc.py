@@ -12,6 +12,7 @@ import json
 import os
 import secrets
 import time
+from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlencode, urlparse
 
@@ -21,6 +22,54 @@ import jwt
 from monitoring_dashboard.auth_config import get_effective_client_secret, get_okta_config
 
 OKTA_STATE_TTL_MS = 15 * 60 * 1000
+
+
+@dataclass
+class DiscoveryAttempt:
+    url: str
+    status_code: int | None = None
+    error: str | None = None
+
+
+@dataclass
+class DiscoveryResult:
+    discovery: dict[str, Any] | None = None
+    attempts: list[DiscoveryAttempt] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return self.discovery is not None
+
+    def discovery_urls(self, domain: str, auth_server_id: str) -> list[str]:
+        domain = normalize_domain(domain)
+        auth_server_id = (auth_server_id or "").strip()
+        if auth_server_id:
+            return [f"https://{domain}/oauth2/{auth_server_id}/.well-known/openid-configuration"]
+        return [
+            f"https://{domain}/.well-known/openid-configuration",
+            f"https://{domain}/oauth2/default/.well-known/openid-configuration",
+        ]
+
+    def format_failure_message(self, domain: str, auth_server_id: str) -> str:
+        lines = [
+            f"Could not reach Okta OIDC discovery for **{normalize_domain(domain)}**.",
+            "If your browser shows *refused to connect* for this host, the network or Okta preview tenant is blocking access — try another network or use production Okta.",
+            "",
+            "**URLs tried (open in your browser):**",
+        ]
+        for attempt in self.attempts:
+            detail = f"HTTP {attempt.status_code}" if attempt.status_code else (attempt.error or "failed")
+            lines.append(f"- `{attempt.url}` — {detail}")
+        if not self.attempts:
+            for url in self.discovery_urls(domain, auth_server_id):
+                lines.append(f"- `{url}`")
+        return "\n".join(lines)
+
+
+class OktaConfigError(ValueError):
+    """Invalid or incomplete Okta OIDC configuration."""
+
+    pass
 
 
 def strip_trailing_slashes(url: str) -> str:
@@ -128,27 +177,33 @@ def resolve_redirect_uri(explicit: str | None = None) -> str:
     return uri
 
 
-async def fetch_okta_discovery(domain: str, auth_server_id: str) -> dict[str, Any] | None:
+async def fetch_okta_discovery_details(domain: str, auth_server_id: str) -> DiscoveryResult:
     domain = normalize_domain(domain)
     auth_server_id = (auth_server_id or "").strip()
-    if auth_server_id:
-        urls = [f"https://{domain}/oauth2/{auth_server_id}/.well-known/openid-configuration"]
-    else:
-        urls = [
-            f"https://{domain}/.well-known/openid-configuration",
-            f"https://{domain}/oauth2/default/.well-known/openid-configuration",
-        ]
+    result = DiscoveryResult()
+    urls = result.discovery_urls(domain, auth_server_id)
     async with httpx.AsyncClient(timeout=15.0) as client:
         for url in urls:
+            attempt = DiscoveryAttempt(url=url)
             try:
                 res = await client.get(url)
+                attempt.status_code = res.status_code
                 if res.status_code == 200:
                     data = res.json()
                     if data.get("authorization_endpoint"):
-                        return data
-            except httpx.HTTPError:
-                continue
-    return None
+                        result.discovery = data
+                        result.attempts.append(attempt)
+                        return result
+                attempt.error = f"HTTP {res.status_code}"
+            except httpx.HTTPError as exc:
+                attempt.error = str(exc) or type(exc).__name__
+            result.attempts.append(attempt)
+    return result
+
+
+async def fetch_okta_discovery(domain: str, auth_server_id: str) -> dict[str, Any] | None:
+    details = await fetch_okta_discovery_details(domain, auth_server_id)
+    return details.discovery
 
 
 def _ensure_host(url: str, host: str) -> str:
@@ -159,11 +214,22 @@ def _ensure_host(url: str, host: str) -> str:
         return url
 
 
+def _validate_okta_signin_config(okta: dict[str, Any]) -> tuple[str, str, str]:
+    domain = normalize_domain(okta.get("domain", ""))
+    if not domain:
+        raise OktaConfigError("Okta domain is required (OKTA_DOMAIN or Settings). Use host only, e.g. aemgovau.oktapreview.com")
+    client_id = (okta.get("clientId") or "").strip()
+    if not client_id:
+        raise OktaConfigError("Okta client ID is required (OKTA_CLIENT_ID or Settings).")
+    client_secret = get_effective_client_secret(okta)
+    if not client_secret:
+        raise OktaConfigError("Okta client secret is required (OKTA_CLIENT_SECRET or Settings).")
+    return domain, client_id, client_secret
+
+
 async def build_authorize_url(redirect_uri: str | None = None) -> str:
     okta = get_okta_config()
-    domain = normalize_domain(okta.get("domain", ""))
-    client_id = (okta.get("clientId") or "").strip()
-    client_secret = get_effective_client_secret(okta)
+    domain, client_id, client_secret = _validate_okta_signin_config(okta)
     auth_server_id = (okta.get("authServerId") or "").strip()
     scope = (okta.get("scope") or "openid profile email").strip()
     redirect = resolve_redirect_uri(redirect_uri or okta.get("redirectUri"))
@@ -273,7 +339,7 @@ async def test_okta_connection(okta: dict[str, Any]) -> tuple[bool, str]:
 
     domain = normalize_domain(okta.get("domain", ""))
     if not domain:
-        return False, "Okta domain is required."
+        return False, "Okta domain is required (host only, no https://)."
     client_id = (okta.get("clientId") or "").strip()
     if not client_id:
         return False, "Client ID is required."
@@ -283,7 +349,8 @@ async def test_okta_connection(okta: dict[str, Any]) -> tuple[bool, str]:
     if not secret:
         return False, "Client secret is required (set in form or OKTA_CLIENT_SECRET)."
     auth_server_id = (okta.get("authServerId") or "").strip()
-    discovery = await fetch_okta_discovery(domain, auth_server_id)
-    if discovery:
-        return True, f"Discovery OK — issuer: {discovery.get('issuer', domain)}"
-    return False, "Could not reach Okta OIDC discovery endpoint. Check domain and authorization server ID."
+    details = await fetch_okta_discovery_details(domain, auth_server_id)
+    if details.discovery:
+        issuer = details.discovery.get("issuer", domain)
+        return True, f"Discovery OK — issuer: {issuer}"
+    return False, details.format_failure_message(domain, auth_server_id)

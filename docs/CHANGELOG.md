@@ -2,7 +2,29 @@
 
 Summary of changes, fixes, and implementation notes. Replaces WHATS_NEW, FIX_SUMMARY, VIEWER_DATA_DISPLAY_FIX, JSONL_DATA_FIX, CSV_LOADING_UPDATE, GO_BIN_COMMANDS_STATUS, and IMPLEMENTATION_SUMMARY.
 
-Dashboard release version is tracked in the root [`VERSION`](../VERSION) file (currently **1.0.11**). Platform / Go suite may use separate versioning in README.
+Dashboard release version is tracked in the root [`VERSION`](../VERSION) file (currently **1.1.2**). Platform / Go suite may use separate versioning in README.
+
+## [1.1.2] - 2026-05-18
+
+Streamlit Cloud Okta UX, partial GHA collection, setup verification
+
+### Added
+
+- Okta OIDC discovery diagnostics (`DiscoveryResult`, login page URLs, Settings test output).
+- `scripts/verify_cloud_setup.sh` — preflight for Okta discovery and GitHub Actions workflow.
+- Streamlit Community Cloud detection (`runtime_env.py`) and collection-tab guidance.
+
+### Changed
+
+- Scheduled collection continues when one environment fails; `collection_meta.json` records partial runs.
+- Secrets loader normalizes `OKTA_DOMAIN` (strips `https://`).
+- Legacy tab label: **Server Vulnerabilities-Legacy Tool**.
+
+### Fixed
+
+- Okta sign-in config validation and HTML-escaped redirect on login page.
+- Expanded `docs/STREAMLIT_CLOUD.md` (Okta troubleshooting, AWS hosting guidance).
+
 ## [1.1.0] - 2026-05-18
 
 Update the dashboard to show data from Legacy Tool scan results
@@ -16,7 +38,7 @@ Update the dashboard to show data from Legacy Tool scan results
 ### Added
 
 - **Keekar's Security Monitoring Dashboard** title, footer attribution, and build version (`monitoring_dashboard/version_info.py`, `scripts/write_version.py`).
-- **ServerVulnerabilities-LegacyTool** tab (first tab): weekly AEM Gov AU trends 2022–2026 (M2, SA, EKS containers).
+- **Server Vulnerabilities-Legacy Tool** tab (first tab): weekly AEM Gov AU trends 2022–2026 (M2, SA, EKS containers).
 - **Splunk Nexpose CSV parser** (`monitoring_dashboard/server_vuln_legacy/splunk_report_parser.py`) for `AMSGovCloud_M2-Prod-*.csv` and `AMSGovCloud_Cust_SA_Acct-*.csv`.
 - **CLI:** `scripts/import_splunk_scan_reports.py` — merge M2 + SA Splunk exports into one weekly row.
 - **UI upload:** drag-and-drop, **multi-file** processing, upload ledger display.

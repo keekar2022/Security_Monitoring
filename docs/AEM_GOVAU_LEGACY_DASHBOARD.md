@@ -7,7 +7,7 @@ contact: mukesh.kesharwani@adobe.com
 
 **Release:** 1.0.11 (see root [`VERSION`](../VERSION))  
 **App title:** Keekar's Security Monitoring Dashboard  
-**Tab:** **ServerVulnerabilities-LegacyTool** (first tab in the Streamlit app)
+**Tab:** **Server Vulnerabilities-Legacy Tool** (first tab in the Streamlit app)
 
 Weekly vulnerability trends for **AMSGovCloud M2-Prod**, **Cust SA Acct**, and **EKS_AEMGovAU_PROD_Cluster** (2022–2026), sourced from AEM Gov AU scanning spreadsheets and Splunk Nexpose exports.
 
@@ -46,7 +46,7 @@ After code or data changes, use **Reload data** on the Legacy tab (or restart St
 
 ## Uploading scan data (UI)
 
-1. Open **ServerVulnerabilities-LegacyTool** → **Upload**.
+1. Open **Server Vulnerabilities-Legacy Tool** → **Upload**.
 2. **Drag and drop** one or more CSV files (or click to browse).
 3. Click **Process upload**.
 

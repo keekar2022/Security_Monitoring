@@ -121,7 +121,8 @@ def _render_sso_tab() -> None:
         if ok:
             st.success(msg)
         else:
-            st.error(msg)
+            st.error("Okta discovery check failed.")
+            st.markdown(msg)
 
     if save_btn:
         if not draft["domain"] or not draft["clientId"]:

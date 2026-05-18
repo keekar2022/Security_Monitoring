@@ -45,7 +45,7 @@ def render_dashboard() -> None:
 
     tabs = st.tabs(
         [
-            "ServerVulnerabilities-LegacyTool",
+            "Server Vulnerabilities-Legacy Tool",
             "Container Vulnerabilities",
             "Endpoint Vulnerabilities",
             "Endpoint Inventory",

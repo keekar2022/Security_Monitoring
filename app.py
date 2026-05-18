@@ -17,6 +17,7 @@ Docs: docs/AEM_GOVAU_LEGACY_DASHBOARD.md (v1.0.11 legacy tab + Splunk upload)
 
 from __future__ import annotations
 
+import html
 from pathlib import Path
 
 import streamlit as st
@@ -30,7 +31,15 @@ from monitoring_dashboard.bootstrap_auth import (
     render_bootstrap_login,
     settings_logout,
 )
-from monitoring_dashboard.okta_oidc import build_authorize_url, exchange_code_for_user
+from monitoring_dashboard.okta_oidc import (
+    OktaConfigError,
+    build_authorize_url,
+    exchange_code_for_user,
+    fetch_okta_discovery_details,
+    normalize_domain,
+)
+from monitoring_dashboard.auth_config import get_okta_config, okta_loaded_from_env
+from monitoring_dashboard.runtime_env import is_streamlit_community_cloud
 from monitoring_dashboard.secrets_loader import apply_streamlit_secrets
 from monitoring_dashboard.app_meta import APP_TITLE
 from monitoring_dashboard.ui_dashboard import render_dashboard
@@ -102,28 +111,87 @@ def _render_okta_login() -> None:
     callback = resolve_redirect_uri()
     st.caption(f"Okta callback URL (must match Okta app settings): `{callback}`")
 
+    if is_streamlit_community_cloud():
+        if okta_loaded_from_env():
+            st.caption("Okta credentials loaded from Streamlit Secrets.")
+        else:
+            st.warning(
+                "On Streamlit Cloud, set **OKTA_*** in **App settings → Secrets** (not only Save in Settings). "
+                "Reboot the app after saving. See `docs/STREAMLIT_CLOUD.md`."
+            )
+
     redirect_url = st.session_state.get("okta_redirect_url")
     if redirect_url:
+        discovery_err = st.session_state.get("okta_discovery_error")
+        if discovery_err:
+            st.warning("Okta discovery from the app server failed; your browser may still reach Okta.")
+            st.markdown(discovery_err)
         st.link_button("Continue to Okta →", redirect_url, type="primary")
+        safe_url = html.escape(redirect_url, quote=True)
         st.markdown(
-            f'<meta http-equiv="refresh" content="0;url={redirect_url}">',
+            f'<meta http-equiv="refresh" content="0;url={safe_url}">',
             unsafe_allow_html=True,
         )
+        domain = normalize_domain(get_okta_config().get("domain", ""))
+        if domain and "oktapreview.com" in domain:
+            st.caption(
+                f"If the browser shows *refused to connect* for `{domain}`, your network may block Okta Preview. "
+                "Test discovery URLs in the expander below or use production Okta in Secrets."
+            )
         return
 
     if st.button("Sign in with Okta", type="primary"):
         try:
+            okta = get_okta_config()
+            domain = normalize_domain(okta.get("domain", ""))
+            auth_server_id = (okta.get("authServerId") or "").strip()
+            if domain:
+                details = run_async(fetch_okta_discovery_details(domain, auth_server_id))
+                if not details.ok:
+                    st.session_state["okta_discovery_error"] = details.format_failure_message(
+                        domain, auth_server_id
+                    )
+                else:
+                    st.session_state.pop("okta_discovery_error", None)
             st.session_state.okta_redirect_url = run_async(build_authorize_url())
             st.rerun()
+        except OktaConfigError as exc:
+            st.error(str(exc))
         except Exception as exc:
             st.error("Could not start Okta sign-in. Check SSO configuration.")
             st.caption(str(exc))
 
+    discovery_err = st.session_state.get("okta_discovery_error")
+    if discovery_err:
+        st.warning("Okta discovery check failed from the app server (sign-in may still work in your browser).")
+        st.markdown(discovery_err)
+
     with st.expander("First-time setup or SSO issues?"):
+        okta = get_okta_config()
+        domain = normalize_domain(okta.get("domain", ""))
+        auth_server_id = (okta.get("authServerId") or "").strip()
         st.markdown(
             "Use **Platform settings (admin)** in the sidebar to configure Okta, "
             "or set secrets in Streamlit Cloud (**App settings → Secrets**). "
             "On Community Cloud, use Secrets (not Save in Settings) for production credentials."
+        )
+        if domain:
+            from monitoring_dashboard.okta_oidc import DiscoveryResult
+
+            st.markdown("**Test these URLs in your browser** (should return JSON):")
+            for url in DiscoveryResult().discovery_urls(domain, auth_server_id):
+                st.markdown(f"- [{url}]({url})")
+        st.markdown(
+            """
+**Okta Admin (aemgovau-secmon):**
+
+| Field | Value |
+|-------|--------|
+| Sign-in redirect URI | `https://aemgovau-secmon.streamlit.app/` |
+| Sign-out redirect URI | `https://aemgovau-secmon.streamlit.app/` |
+| Grant type | Authorization Code |
+| PKCE | Required (S256) |
+            """
         )
 
 

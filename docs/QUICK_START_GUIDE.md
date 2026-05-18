@@ -13,7 +13,7 @@ Get started with the multi-language implementations of Trend Micro Vision One AP
 
 | Task | Command / location |
 |------|-------------------|
-| Legacy weekly trends | Tab **ServerVulnerabilities-LegacyTool** |
+| Legacy weekly trends | Tab **Server Vulnerabilities-Legacy Tool** |
 | Upload Splunk/AEM CSVs | Legacy → **Upload** (multi-file drag-and-drop) |
 | Import Splunk CLI | `python3 scripts/import_splunk_scan_reports.py` … |
 | Import AEM bulk CLI | `python3 scripts/import_aem_govau_scan_reports.py` … |

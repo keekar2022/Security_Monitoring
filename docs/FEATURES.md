@@ -82,7 +82,7 @@ docker compose run --rm --entrypoint /app/get_endpoint_vulnerabilities api --env
 ## 4. Streamlit Dashboard — AEM Gov AU Legacy (v1.0.11)
 
 **App:** `app.py` — **Keekar's Security Monitoring Dashboard**  
-**Tab:** **ServerVulnerabilities-LegacyTool** (weekly M2 / SA / EKS trends, 2022–2026)
+**Tab:** **Server Vulnerabilities-Legacy Tool** (weekly M2 / SA / EKS trends, 2022–2026)
 
 ### What it does
 
@@ -94,7 +94,7 @@ docker compose run --rm --entrypoint /app/get_endpoint_vulnerabilities api --env
 
 ```bash
 ./scripts/start_dashboard.sh
-# http://localhost:8501/ → ServerVulnerabilities-LegacyTool
+# http://localhost:8501/ → Server Vulnerabilities-Legacy Tool
 ```
 
 ### Import data (CLI)
