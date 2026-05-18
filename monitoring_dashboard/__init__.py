@@ -3,4 +3,4 @@
 
 """Trend Micro monitoring dashboard — Streamlit UI, Okta OIDC, metrics visualization."""
 
-__version__ = "1.1.4"
+__version__ = "2.0.0"

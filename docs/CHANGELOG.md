@@ -2,7 +2,27 @@
 
 Summary of changes, fixes, and implementation notes. Replaces WHATS_NEW, FIX_SUMMARY, VIEWER_DATA_DISPLAY_FIX, JSONL_DATA_FIX, CSV_LOADING_UPDATE, GO_BIN_COMMANDS_STATUS, and IMPLEMENTATION_SUMMARY.
 
-Dashboard release version is tracked in the root [`VERSION`](../VERSION) file (currently **1.1.4**). Platform / Go suite may use separate versioning in README.
+Dashboard release version is tracked in the root [`VERSION`](../VERSION) file (currently **2.0.0**). Platform / Go suite may use separate versioning in README.
+
+## [2.0.0] - 2026-05-19
+
+Major release — pre-AWS deployment baseline
+
+### Summary
+
+Freeze the working Streamlit dashboard, Okta OIDC integration, resilient Trend Micro collection, and UI enhancements (v1.1.x) as the rollback point before EC2/Terraform AWS-only deployment work.
+
+### Included (since 1.1.x)
+
+- Streamlit dashboard with Okta sign-in and bootstrap Settings auth
+- Coloured navigation, Top 15 chart averaging, legacy trends copy fixes
+- GitHub Actions / local collection with partial-success handling and `--non-fatal` endpoint vuln collector
+- `verify_cloud_setup.sh` and improved Streamlit Cloud / Okta troubleshooting docs
+- Example secrets for `aemgovau.oktapreview.com` in `.streamlit/secrets.toml.example`
+
+### Note
+
+AWS EC2 + ASG + Secrets Manager deployment begins after this tag. Use `git checkout v2.0.0` to restore this edition.
 
 ## [1.1.4] - 2026-05-18
 
