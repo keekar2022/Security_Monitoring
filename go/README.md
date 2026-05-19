@@ -170,31 +170,9 @@ GOOS=windows GOARCH=amd64 go build -o bin/windows/get_container_vulnerabilities.
 GOOS=darwin GOARCH=arm64 go build -o bin/macos/get_container_vulnerabilities src/get_container_vulnerabilities.go
 ```
 
-## Docker Deployment
+## Kubernetes / containers (optional)
 
-```dockerfile
-# Build stage
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /get_container_vulnerabilities src/get_container_vulnerabilities.go
-
-# Runtime stage
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-COPY --from=builder /get_container_vulnerabilities /
-COPY config/ /config/
-ENTRYPOINT ["/get_container_vulnerabilities"]
-```
-
-Build and run:
-
-```bash
-docker build -t trendmicro-container-vuln -f Dockerfile.check_api .
-docker run -v $(pwd)/config:/config trendmicro-container-vuln --environment production
-```
+Container images are **not** maintained in this repo. Build `go/bin/*` in your own Dockerfile if needed.
 
 ## Testing
 

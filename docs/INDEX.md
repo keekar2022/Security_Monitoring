@@ -1,49 +1,35 @@
 # Documentation Index
 
-Single entry point for the Trend Micro Vision One API Integration Suite (Go-based) and the **Streamlit security dashboard** (release **1.0.11** — see [`VERSION`](../VERSION)).
+**Keekar's Security Monitoring Dashboard** — Trend Micro collectors (Go) + Streamlit UI. Production: **AWS EC2** ([AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md)).
 
 ---
 
-## Start Here
+## Start here
 
 | Doc | Description |
 |-----|-------------|
-| [QUICK_START_GUIDE.md](QUICK_START_GUIDE.md) | Get running in minutes: Go, Docker, Streamlit dashboard, pass |
-| [CONFIGURATION.md](CONFIGURATION.md) | Config files, environments, API endpoints |
-| [PASS_AND_CREDENTIALS.md](PASS_AND_CREDENTIALS.md) | Pass setup, token storage rules, helper scripts |
-
----
-
-## Features & Reference
-
-| Doc | Description |
-|-----|-------------|
-| [FEATURES.md](FEATURES.md) | Container and endpoint scanning (tools, options, permissions) |
-| [AEM_GOVAU_LEGACY_DASHBOARD.md](AEM_GOVAU_LEGACY_DASHBOARD.md) | **v1.0.11** — AEM Gov AU weekly trends, Splunk upload, legacy tab charts |
-| [STREAMLIT_CLOUD.md](STREAMLIT_CLOUD.md) | Deploy Keekar's Security Monitoring Dashboard on Community Cloud |
-| [API_REFERENCE.md](API_REFERENCE.md) | APIs used, data availability, vulnerability notes |
-| [MONITORING.md](MONITORING.md) | Health, logging, Grafana/Loki |
-| [BEST_PRACTICES.md](BEST_PRACTICES.md) | Usage and development practices |
-
----
-
-## Migration & Support
-
-| Doc | Description |
-|-----|-------------|
-| [MIGRATION.md](MIGRATION.md) | Go implementation, language migration, conversion |
+| [USER_GUIDE.md](USER_GUIDE.md) | Dashboard, Go collectors, AEM legacy tab |
+| [AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md) | **Production** — Terraform, EC2, S3, Secrets Manager |
+| [CONFIGURATION.md](CONFIGURATION.md) | Config files, pass, APIs, monitoring, Go |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common issues and fixes |
-| [CHANGELOG.md](CHANGELOG.md) | Changes, fixes, version history |
 
 ---
 
-## Other
+## Reference
 
-- **Go README**: [../go/README.md](../go/README.md)
-- **Project README**: [../README.md](../README.md)
-- **Images**: [docs/images/](images/) (screenshots/diagrams)
-- **AWS IAM QCR plan**: [AWS_IAM_METRIC_QCR_PLAN.md](AWS_IAM_METRIC_QCR_PLAN.md) – Quarterly attestation metric (AM-01-01), Parameter Store, single-execution script
+| Doc | Description |
+|-----|-------------|
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [../scripts/README.md](../scripts/README.md) | Script inventory |
+| [../go/README.md](../go/README.md) | Go build and binaries |
+| [../README.md](../README.md) | Project overview |
 
 ---
 
-[Back to Main README](../README.md)
+## Assets
+
+- Screenshots: [images/](images/)
+
+---
+
+[Back to main README](../README.md)

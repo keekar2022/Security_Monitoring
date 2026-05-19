@@ -71,17 +71,13 @@ Integration-API-Dev/
 ├── monitoring_dashboard/                  # Dashboard UI, auth, legacy AEM/Splunk parsers
 ├── data/server_vulnerabilities_legacy/    # Weekly AEM Gov AU + Splunk metrics (JSONL)
 ├── scripts/
-│   ├── start_dashboard.sh                # Local Streamlit
-│   ├── import_aem_govau_scan_reports.py  # Bulk AEM CSV import
-│   └── import_splunk_scan_reports.py     # Splunk Nexpose weekly import
-├── docs/                                  # 📚 Complete Documentation
-│   ├── INDEX.md                          # Documentation index (start here)
-│   ├── AEM_GOVAU_LEGACY_DASHBOARD.md     # Legacy tab, Splunk upload, v1.0.11
-│   ├── STREAMLIT_CLOUD.md                # Community Cloud deploy
-│   ├── FEATURES.md                       # Container & endpoint scanning
-│   ├── CONFIGURATION.md                  # Configuration reference
-│   ├── PASS_AND_CREDENTIALS.md           # Pass & credential storage
-│   └── ...                                # Additional guides
+│   ├── debug/                            # Troubleshooting & local dev (not on EC2 release)
+│   └── …                                 # aws_deploy.sh, ec2_*, package_app_release.sh
+├── docs/                                  # 📚 Documentation (see INDEX.md)
+│   ├── USER_GUIDE.md                     # Dashboard, collectors, legacy tab
+│   ├── AWS_DEPLOYMENT.md                 # Production EC2 / Terraform
+│   ├── CONFIGURATION.md                  # Config, pass, APIs
+│   └── TROUBLESHOOTING.md                # Common fixes
 │
 ├── lib/                                   # (Deprecated Python library)
 │   └── config_loader.py                   
@@ -142,52 +138,23 @@ make build
 **Keekar's Security Monitoring Dashboard** — Trend Micro JSONL tabs plus **AEM Gov AU legacy** weekly trends (Splunk/AEM upload).
 
 ```bash
-./scripts/start_dashboard.sh
+./scripts/debug/start_dashboard.sh
 # http://localhost:8501/ → Server Vulnerabilities-Legacy Tool (first tab)
 ```
 
 Import Splunk Nexpose weekly CSVs:
 
 ```bash
-python3 scripts/import_splunk_scan_reports.py \
+python3 scripts/debug/import_splunk_scan_reports.py \
   ~/Downloads/AMSGovCloud_M2-Prod-2026-05-14.csv \
   ~/Downloads/AMSGovCloud_Cust_SA_Acct-2026-05-14.csv
 ```
 
-📚 [AEM Gov AU Legacy Dashboard](docs/AEM_GOVAU_LEGACY_DASHBOARD.md) · [Streamlit Cloud](docs/STREAMLIT_CLOUD.md) · [CHANGELOG 1.0.11](docs/CHANGELOG.md#1011--2026-05-18--aem-gov-au-legacy-dashboard--splunk-ingest)
+📚 [User Guide](docs/USER_GUIDE.md) · [AWS Deployment](docs/AWS_DEPLOYMENT.md) · [CHANGELOG](docs/CHANGELOG.md)
 
-### Docker (Mac & Windows)
+### Production deployment (AWS)
 
-Run the API server in Docker Desktop so anyone can start and work without installing Go.
-
-**Prerequisites:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac or Windows).
-
-**First-time run:**
-```bash
-docker compose up -d --build
-```
-Or use the sync script: `./sync.sh` (Mac/Linux) or `.\sync.ps1` (Windows).
-
-**After pulling updates or changing source:** Rebuild and restart the container with one script:
-- **Mac/Linux:** `./sync.sh`
-- **Windows:** `.\sync.ps1` (or run `./sync.sh` in Git Bash)
-
-Config and data stay on the host: `./config` and `./data` are mounted into the container, so changes to config or JSONL files are visible to the API without rebuilding. The API is available at **http://localhost:8080**.
-
-To **fetch endpoint vulnerabilities from Trend Micro** (or other reports) inside Docker, run a one-off container with the same config and data volumes:
-
-```bash
-# Endpoint vulnerabilities (writes to ./data/, API server will pick up the new JSONL)
-docker compose run --rm --entrypoint /app/get_endpoint_vulnerabilities api --environment production
-
-# Other tools (endpoint inventory, container vulnerabilities):
-docker compose run --rm --entrypoint /app/get_endpoint_stats api --environment production
-docker compose run --rm --entrypoint /app/get_container_vulnerabilities api --environment production
-```
-
-Replace `production` with your environment name (e.g. `quality_test`, `production_au`). Ensure `config/` has your Trend Micro credentials (e.g. `deployment_config.json` or pass).
-
-**Pass store inside the image (no host pass at run time):** The image has its own password store so users (including on Windows) do not re-enter tokens. To put your Trend Micro tokens into the image once (on a Mac/Linux with pass), run `./export-pass-for-docker.sh`, then `docker compose build`. That bakes your `TrendMicro/*` entries into the image. If you never run the export script, the image still builds with an empty store (use `config/deployment_config.json`). For an empty store only, run `./export-pass-for-docker.sh --empty`, then build.
+Dashboard and collectors run on **EC2** with **S3** and **Secrets Manager**. See [docs/AWS_DEPLOYMENT.md](docs/AWS_DEPLOYMENT.md).
 
 ---
 
@@ -268,7 +235,7 @@ open http://localhost:8080/
 }
 ```
 
-📚 **See**: [MIGRATION](docs/MIGRATION.md) and [go/README](go/README.md) for API server and Go details
+📚 **See**: [USER_GUIDE](docs/USER_GUIDE.md) and [go/README](go/README.md) for collectors and Go build
 
 ---
 
@@ -381,37 +348,19 @@ pass show trendmicro/production/api_token
 
 Tools automatically retrieve credentials from `pass`.
 
-📚 **See**: [Pass & Credentials](docs/PASS_AND_CREDENTIALS.md) | [Configuration](docs/CONFIGURATION.md)
+📚 **See**: [Configuration](docs/CONFIGURATION.md#pass--credentials) (pass & credentials)
 
 ---
 
-## 🐳 Deployment
+## Deployment
 
-### Docker
+**Primary:** [AWS EC2 + ALB + S3](docs/AWS_DEPLOYMENT.md) — Terraform in `terraform/envs/aws1590/`, deploy scripts under `scripts/`.
 
-```dockerfile
-FROM golang:1.21-alpine AS builder
-WORKDIR /app
-COPY go/ .
-RUN go build -o /api-server cmd/api-server/main.go
+**Local API:** build with `make -C go build` and run `./go/bin/api-server --port 8080 --data-dir ..` (see [Go README](go/README.md)).
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-COPY --from=builder /api-server /api-server
-COPY *.jsonl /data/
+### Kubernetes (optional)
 
-EXPOSE 8080
-CMD ["/api-server", "--port", "8080", "--data-dir", "/data"]
-```
-
-```bash
-docker build -t trend-micro-api:latest .
-docker run -d -p 8080:8080 \
-    -v $(pwd):/data \
-    trend-micro-api:latest
-```
-
-### Kubernetes
+If you containerize elsewhere, run the **api-server** binary from `go/bin/` in your own image. Example skeleton:
 
 ```yaml
 apiVersion: apps/v1
@@ -424,7 +373,7 @@ spec:
     spec:
       containers:
       - name: api-server
-        image: trend-micro-api:latest
+        image: your-registry/secmon-api:latest
         ports:
         - containerPort: 8080
         resources:
@@ -469,13 +418,11 @@ WantedBy=multi-user.target
 | Document | Description |
 |----------|-------------|
 | [Index](docs/INDEX.md) | Documentation index (start here) |
-| [Quick Start](docs/QUICK_START_GUIDE.md) | Get running in minutes |
-| [Configuration](docs/CONFIGURATION.md) | Config reference |
-| [Pass & Credentials](docs/PASS_AND_CREDENTIALS.md) | Credential storage |
-| [Features](docs/FEATURES.md) | Container & endpoint scanning |
-| [AEM Gov AU Legacy Dashboard](docs/AEM_GOVAU_LEGACY_DASHBOARD.md) | Weekly M2/SA/EKS trends, Splunk upload (v1.0.11) |
-| [Streamlit Cloud](docs/STREAMLIT_CLOUD.md) | Deploy dashboard to Community Cloud |
-| [Changelog](docs/CHANGELOG.md) | Version 1.1.0 |
+| [User Guide](docs/USER_GUIDE.md) | Dashboard, Go collectors, AEM legacy tab |
+| [AWS Deployment](docs/AWS_DEPLOYMENT.md) | Production EC2, Terraform, Secrets Manager |
+| [Configuration](docs/CONFIGURATION.md) | Config, pass, APIs, monitoring |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Common issues |
+| [Changelog](docs/CHANGELOG.md) | Version history |
 
 ---
 

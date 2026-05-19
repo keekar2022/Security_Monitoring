@@ -1,0 +1,130 @@
+#!/bin/bash
+# Concept: Mukesh Kesharwani
+# Contact: mukesh.kesharwani@adobe.com
+# Security Monitoring EC2 bootstrap — immutable instance pattern
+set -euo pipefail
+exec > >(tee /var/log/secmon-user-data.log) 2>&1
+
+PROJECT="${project_name}"
+REGION="${aws_region}"
+S3_BUCKET="${s3_bucket}"
+APP_VERSION="${app_release_version}"
+SECRET_APP="${secret_app_name}"
+SECRET_TM="${secret_trendmicro_name}"
+OS_UPDATE="${user_data_os_update}"
+
+export AWS_DEFAULT_REGION="$REGION"
+INSTALL_ROOT="/opt/secmon"
+APP_ROOT="$INSTALL_ROOT/app"
+DATA_DIR="$INSTALL_ROOT/data"
+VENV="$INSTALL_ROOT/venv"
+ENV_DIR="/run/secmon"
+mkdir -p "$ENV_DIR" "$APP_ROOT" "$DATA_DIR" /var/log/secmon
+chmod 700 "$ENV_DIR"
+
+log() { echo "[secmon-bootstrap] $*"; }
+
+if [[ "$OS_UPDATE" == "true" ]]; then
+  log "dnf update (emergency override enabled)"
+  dnf -y update || true
+fi
+
+log "Installing packages"
+dnf -y install python3.11 python3.11-pip python3.11-devel gcc aws-cli jq git tar gzip curl
+
+_fetch_secret() {
+  local name="$1" out="$2"
+  aws secretsmanager get-secret-value --secret-id "$name" --query SecretString --output text > "$out"
+  chmod 600 "$out"
+}
+
+log "Fetching Secrets Manager"
+_fetch_secret "$SECRET_APP" "$ENV_DIR/app.json"
+_fetch_secret "$SECRET_TM" "$ENV_DIR/trendmicro.json"
+
+jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' "$ENV_DIR/app.json" > "$ENV_DIR/app.env"
+jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' "$ENV_DIR/trendmicro.json" > "$ENV_DIR/collect.env"
+chmod 600 "$ENV_DIR/app.env" "$ENV_DIR/collect.env"
+
+# Deployment mode for Streamlit UI
+echo 'SECMON_COLLECTION_MODE=ec2' >> "$ENV_DIR/app.env"
+echo "DATA_DIR=$DATA_DIR" >> "$ENV_DIR/app.env"
+echo "METRICS_S3_BUCKET=$S3_BUCKET" >> "$ENV_DIR/collect.env"
+echo "DATA_DIR=$DATA_DIR" >> "$ENV_DIR/collect.env"
+echo 'USE_PASS=false' >> "$ENV_DIR/collect.env"
+echo 'COLLECTOR_NON_FATAL=true' >> "$ENV_DIR/collect.env"
+echo 'SECMON_COLLECTION_MODE=ec2' >> "$ENV_DIR/collect.env"
+
+# Persistent deploy settings (survives ec2_fetch_secrets.sh refresh)
+cat > "$INSTALL_ROOT/deploy.env" <<EOF
+METRICS_S3_BUCKET=$S3_BUCKET
+DATA_DIR=$DATA_DIR
+AWS_DEFAULT_REGION=$REGION
+SECMON_COLLECTION_MODE=ec2
+USE_PASS=false
+COLLECTOR_NON_FATAL=true
+EOF
+chmod 644 "$INSTALL_ROOT/deploy.env"
+
+log "Syncing app release s3://$S3_BUCKET/releases/$APP_VERSION/"
+aws s3 sync "s3://$S3_BUCKET/releases/$APP_VERSION/" "$APP_ROOT/" --delete
+
+log "Syncing metrics data/"
+aws s3 sync "s3://$S3_BUCKET/data/" "$DATA_DIR/" || true
+
+if [[ ! -f "$APP_ROOT/app.py" ]]; then
+  log "ERROR: app.py missing after S3 sync — upload release to s3://$S3_BUCKET/releases/$APP_VERSION/"
+  exit 1
+fi
+
+log "chmod +x on scripts and Go binaries"
+find "$APP_ROOT/scripts" -type f -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
+[[ -d "$APP_ROOT/go/bin" ]] && chmod +x "$APP_ROOT/go/bin/"* 2>/dev/null || true
+
+log "Python venv"
+if [[ -f "$VENV/.secmon-baked" && -x "$VENV/bin/streamlit" ]]; then
+  log "Using pre-baked venv from AMI ($VENV/.secmon-baked)"
+else
+  python3.11 -m venv "$VENV" 2>/dev/null || true
+  "$VENV/bin/pip" install --upgrade pip
+  if ! "$VENV/bin/pip" install -r "$APP_ROOT/requirements.txt"; then
+    log "WARN: pip install failed — see /var/log/secmon-user-data.log"
+  fi
+fi
+
+for unit in secmon-streamlit.service secmon-fetch-secrets.service; do
+  if [[ -f "$APP_ROOT/deploy/systemd/$unit" ]]; then
+    cp "$APP_ROOT/deploy/systemd/$unit" "/etc/systemd/system/$unit"
+  fi
+done
+
+if [[ -f "$APP_ROOT/deploy/cron/secmon-collect" ]]; then
+  mkdir -p /etc/cron.d
+  cp "$APP_ROOT/deploy/cron/secmon-collect" /etc/cron.d/secmon-collect
+  chmod 644 /etc/cron.d/secmon-collect
+fi
+
+if [[ -x "$APP_ROOT/scripts/ec2_fetch_secrets.sh" ]]; then
+  SECMON_DEPLOY_ENV="$INSTALL_ROOT/deploy.env" "$APP_ROOT/scripts/ec2_fetch_secrets.sh" || log "WARN: ec2_fetch_secrets failed"
+fi
+
+systemctl daemon-reload
+systemctl enable secmon-fetch-secrets.service secmon-streamlit.service
+systemctl start secmon-fetch-secrets.service || true
+systemctl start secmon-streamlit.service
+
+log "Waiting for Streamlit health"
+for _i in $(seq 1 36); do
+  if curl -sf "http://127.0.0.1:8501/_stcore/health" >/dev/null 2>&1; then
+    log "Streamlit healthy on :8501"
+    log "Bootstrap complete"
+    exit 0
+  fi
+  sleep 10
+done
+
+log "ERROR: Streamlit not healthy after bootstrap"
+systemctl status secmon-streamlit.service --no-pager || true
+journalctl -u secmon-streamlit -n 30 --no-pager || true
+tail -30 /var/log/secmon/streamlit.log 2>/dev/null || true
+exit 1

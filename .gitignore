@@ -13,9 +13,6 @@ config/auth_config.json
 # Local dashboard runtime
 .run/
 
-# Generated credential exports (migrate_pass_to_cloud_credentials.sh)
-secrets/generated/
-
 # Token files
 *.token
 *token*.json
@@ -60,9 +57,8 @@ Thumbs.db
 # Legacy Splunk upload temp (metrics dir is committed with mock seed)
 data/server_vulnerabilities_legacy/*.upload.tmp
 
-# Exported pass store for Docker (contains secrets; use export-pass-for-docker.sh to create)
+# Exported pass store (legacy Docker tooling — ignore if present)
 /pass-export/
-# Default empty store (contains GPG key; run export-pass-for-docker.sh --empty to create before first build)
 /pass-export-default/
 
 

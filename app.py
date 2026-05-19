@@ -12,7 +12,7 @@ Run locally:
 Deploy (Streamlit Community Cloud): push branch main or Development to
   https://github.com/keekar2022/Security_Monitoring — main file app.py
 
-Docs: docs/AEM_GOVAU_LEGACY_DASHBOARD.md (v1.0.11 legacy tab + Splunk upload)
+Docs: docs/USER_GUIDE.md (legacy tab + Splunk upload)
 """
 
 from __future__ import annotations
@@ -117,7 +117,7 @@ def _render_okta_login() -> None:
         else:
             st.warning(
                 "On Streamlit Cloud, set **OKTA_*** in **App settings → Secrets** (not only Save in Settings). "
-                "Reboot the app after saving. See `docs/STREAMLIT_CLOUD.md`."
+                "Reboot the app after saving. See `docs/AWS_DEPLOYMENT.md` (Streamlit Cloud legacy)."
             )
 
     redirect_url = st.session_state.get("okta_redirect_url")

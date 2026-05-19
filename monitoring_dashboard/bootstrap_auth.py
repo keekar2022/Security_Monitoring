@@ -17,7 +17,6 @@ _DEFAULT_PASSWORD_HASH = (
 )
 _MAX_ATTEMPTS = 5
 _LOCKOUT_SECONDS = 60
-_DEFAULT_PASSWORD = "TryMein2026"
 _PASSWORD_PLACEHOLDERS = frozenset(
     {"", "change-me", "change-me-after-first-login", "your-password", "your_password"}
 )
@@ -33,10 +32,6 @@ def _configured_admin_password() -> str:
     if value.lower() in _PASSWORD_PLACEHOLDERS:
         return ""
     return value
-
-
-def _using_cloud_password_override() -> bool:
-    return bool(_configured_admin_password())
 
 
 def _verify_password(password: str) -> bool:
@@ -75,16 +70,11 @@ def render_bootstrap_login() -> bool:
 
     st.subheader("Settings access")
     st.caption("Sign in to configure Okta OIDC. Okta is not configured yet.")
-    if _using_cloud_password_override():
-        st.caption(
-            f"Username: **{_admin_user()}** · Password is the value of "
-            "`SETTINGS_ADMIN_PASSWORD` in Streamlit Cloud **Secrets** (not the code default)."
-        )
-    else:
-        st.caption(
-            f"Username: **{_admin_user()}** · Default password: **`{_DEFAULT_PASSWORD}`** "
-            "(capital **M**). Override via `SETTINGS_ADMIN_PASSWORD` in Secrets or `.env`."
-        )
+    st.caption(
+        f"Username: **{_admin_user()}**. Password is configured via "
+        "`SETTINGS_ADMIN_PASSWORD` (Secrets Manager on EC2, Streamlit Secrets, or `.env`) — "
+        "it is never shown here."
+    )
 
     with st.form("bootstrap_login"):
         username = st.text_input("Username", autocomplete="username")

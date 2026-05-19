@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import os
-from typing import Any
 
 import streamlit as st
 
@@ -19,77 +18,34 @@ from monitoring_dashboard.collection_schedule import (
     load_policy,
     next_due_at,
 )
-from monitoring_dashboard.runtime_env import is_streamlit_community_cloud
-
-GITHUB_REPO_DEFAULT = "keekar2022/Security_Monitoring"
-WORKFLOW_FILE = "collect-metrics.yml"
-
-
-def _trigger_github_workflow(force: bool = True) -> tuple[bool, str]:
-    token = (
-        (os.environ.get("WORKFLOW_DISPATCH_TOKEN") or "").strip()
-        or (os.environ.get("GITHUB_TOKEN") or "").strip()
-    )
-    repo = (os.environ.get("GITHUB_REPO") or GITHUB_REPO_DEFAULT).strip()
-    ref = (os.environ.get("GITHUB_REF") or "main").strip()
-    if not token:
-        return False, "Set WORKFLOW_DISPATCH_TOKEN or GITHUB_TOKEN in Streamlit Secrets to trigger runs from the app."
-
-    try:
-        import httpx
-    except ImportError:
-        return False, "httpx is required for workflow dispatch (already in requirements.txt)."
-
-    owner, _, name = repo.partition("/")
-    if not owner or not name:
-        return False, f"Invalid GITHUB_REPO: {repo}"
-
-    url = f"https://api.github.com/repos/{owner}/{name}/actions/workflows/{WORKFLOW_FILE}/dispatches"
-    payload: dict[str, Any] = {"ref": ref, "inputs": {"force": "true" if force else "false"}}
-
-    try:
-        with httpx.Client(timeout=30.0) as client:
-            res = client.post(
-                url,
-                json=payload,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Accept": "application/vnd.github+json",
-                    "X-GitHub-Api-Version": "2022-11-28",
-                },
-            )
-        if res.status_code == 204:
-            return True, f"Workflow triggered on {repo} ({ref})."
-        return False, f"GitHub API {res.status_code}: {res.text[:300]}"
-    except httpx.HTTPError as exc:
-        return False, f"Request failed: {exc}"
-
-
-def _has_workflow_dispatch_token() -> bool:
-    return bool(
-        (os.environ.get("WORKFLOW_DISPATCH_TOKEN") or "").strip()
-        or (os.environ.get("GITHUB_TOKEN") or "").strip()
-    )
+from monitoring_dashboard.runtime_env import is_ec2_deployment, is_streamlit_community_cloud
 
 
 def render_collection_tab() -> None:
     st.markdown("### Data collection")
-    st.caption(
-        "Collectors run on **GitHub Actions** or **NAS/local cron**, not inside Streamlit Cloud. "
-        "Updated JSONL is pushed to `data/` in GitHub; this app reads those files."
-    )
+    ec2 = is_ec2_deployment()
+    bucket = (os.environ.get("METRICS_S3_BUCKET") or "").strip()
 
-    if is_streamlit_community_cloud():
-        st.info(
-            "This Streamlit app **displays** metrics only. Trend Micro collection runs in "
-            "**GitHub Actions** on `keekar2022/Security_Monitoring`. "
-            "If charts are stale, check Actions or use **Run now** below."
+    if ec2:
+        st.caption(
+            "Collectors run on **this EC2 instance** (daily cron). Metrics are stored under "
+            f"`s3://{bucket or '<METRICS_S3_BUCKET>'}/data/` and synced locally for the dashboard."
         )
-        if not _has_workflow_dispatch_token():
-            st.caption(
-                "Add `WORKFLOW_DISPATCH_TOKEN` (GitHub PAT with `workflow` scope) to Streamlit Secrets "
-                "to enable **Run now (force)** from this page."
-            )
+        st.info(
+            "AWS deployment: run `/opt/secmon/app/scripts/ec2_daily_collect.sh` via SSM for a manual "
+            "collect, or wait for cron (06:00 UTC)."
+        )
+    elif is_streamlit_community_cloud():
+        st.caption("This Streamlit Community Cloud app **displays** metrics only.")
+        st.warning(
+            "Trend Micro collection is **not** run on Streamlit Cloud. Use "
+            "[AWS EC2 deployment](../docs/AWS_DEPLOYMENT.md) (recommended) or collect locally and "
+            "upload metrics to S3."
+        )
+    else:
+        st.caption(
+            "Local / laptop: run collectors with pass or env tokens; production uses **EC2 cron + S3**."
+        )
 
     policy = load_policy()
     meta = load_meta()
@@ -120,48 +76,39 @@ def render_collection_tab() -> None:
             + ", ".join(str(e) for e in partial_envs)
         )
     if failed_envs:
+        log_hint = "Check `/var/log/secmon/collect.log` on EC2." if ec2 else "Check collector logs on the host that ran collection."
         st.error(
             "Last run **failed** for: "
             + ", ".join(str(e) for e in failed_envs)
-            + ". Check GitHub Actions logs."
+            + f". {log_hint}"
         )
     if meta.get("trigger"):
         st.caption(f"Last trigger: {meta.get('trigger')} · duration: {meta.get('duration_seconds', '—')}s")
-    elif is_streamlit_community_cloud() and not last:
+    elif not last and not ec2:
         st.warning(
-            "No successful collection recorded in `data/collection_meta.json` on this branch. "
-            "Set GitHub repository secrets (`TRENDMICRO_*_API_TOKEN`) and run "
-            "**Actions → Collect security metrics** with `force=true`."
-        )
-
-    st.markdown("#### Run collection")
-    col_a, col_b = st.columns(2)
-    with col_a:
-        if st.button("Run now (force)", type="primary"):
-            ok, msg = _trigger_github_workflow(force=True)
-            if ok:
-                st.success(msg)
-            else:
-                st.warning(msg)
-    with col_b:
-        st.link_button(
-            "Open GitHub Actions",
-            f"https://github.com/{os.environ.get('GITHUB_REPO', GITHUB_REPO_DEFAULT)}/actions/workflows/{WORKFLOW_FILE}",
+            "No successful collection recorded in `data/collection_meta.json`. "
+            "Run collection for your deployment mode (see setup below)."
         )
 
     with st.expander("Schedule & credentials setup"):
-        st.markdown(
-            """
-1. **Migrate API keys from pass (local Mac):**
-   ```bash
-   ./scripts/migrate_pass_to_cloud_credentials.sh
-   ```
-2. Paste `secrets/generated/streamlit_secrets.fragment.toml` into **Streamlit Cloud → Secrets**.
-3. Run `secrets/generated/set_github_secrets.sh` to set GitHub repository secrets.
-4. Set `COLLECTION_FREQUENCY` to `daily`, `weekly`, or `monthly` in Streamlit and GitHub secrets.
-5. **NAS cron (optional):** `USE_PASS=true ./scripts/run_scheduled_collect.sh` daily (do not enable `PUSH_AFTER_COLLECT` if GitHub Actions pushes).
+        if ec2:
+            st.markdown(
+                """
+1. Populate **Secrets Manager**: `{project}/secmon/app` (Okta, admin) and `{project}/secmon/trendmicro` (API tokens).
+2. Publish app release: `./scripts/package_app_release.sh 2.0.0 <s3-bucket>`.
+3. Cron runs daily at **06:00 UTC** (`/etc/cron.d/secmon-collect`).
+4. Manual collect: `sudo /opt/secmon/app/scripts/ec2_daily_collect.sh`.
+5. See [AWS deployment guide](../docs/AWS_DEPLOYMENT.md).
+                """.replace("{project}", os.environ.get("SECMON_PROJECT", "ams-secmon"))
+            )
+        else:
+            st.markdown(
+                """
+1. **AWS production (EC2):** `./scripts/migrate_secrets_to_aws.sh` — see `docs/AWS_DEPLOYMENT.md`.
+2. **Local laptop:** `USE_PASS=true ./scripts/run_scheduled_collect.sh` (requires pass or `TRENDMICRO_*_API_TOKEN` env vars).
+3. **Upload metrics to S3:** `./scripts/push_local_metrics_to_s3.sh` then `./scripts/aws_deploy.sh --update --metrics-only`.
 
-**Okta / admin login** is separate from Trend Micro API tokens.
-            """
-        )
+**Okta / admin login** is separate from Trend Micro API tokens (Secrets Manager on EC2).
+                """
+            )
         st.text(format_status())

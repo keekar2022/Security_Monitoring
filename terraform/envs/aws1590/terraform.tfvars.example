@@ -1,0 +1,53 @@
+# Concept: Mukesh Kesharwani
+# Contact: mukesh.kesharwani@adobe.com
+# Copy to terraform.tfvars (gitignored) and customize.
+# Account: AMS_1590-STG — credentials in pass: AWS/AMS_1590-STG
+
+aws_region   = "us-east-1"
+# From pass or: aws sts get-caller-identity --query Account --output text
+aws_account_id = "" # REPLACE: AMS_1590-STG account ID
+environment  = "stg"
+project_name = "ams-secmon"
+
+vpc_cidr = "10.42.0.0/16"
+
+# PCL: no 0.0.0.0/0 — your VPN or office IPs
+default_allowed_cidr_blocks = [
+  "130.248.32.17/32",
+  "203.191.182.150/32",
+]
+
+instance_type         = "t3.small"
+instance_architecture = "x86_64"
+key_name              = null # SSM Session Manager preferred
+
+# S3 bucket name (globally unique, lowercase) — include account ID
+s3_bucket_name = "ams-secmon-REPLACE_ACCOUNT_ID"
+
+secmon_app_release_version = "2.0.0"
+
+# Image Factory EMR — discover: ./terraform/scripts/list-emr-candidate-amis.sh us-east-1
+use_image_factory_ami               = true
+image_factory_enable_dynamic_lookup = false # true only when Image Factory AMIs are shared to this account
+image_factory_owner_id              = null  # Image Factory owner account (required if dynamic lookup enabled)
+image_factory_ami_name_pattern      = "*Amazon*Linux*2023*EMR*"
+# Pin AMI (recommended for AMS_1590-STG until shared AMIs are available):
+# image_factory_amazon_linux_ami_us_east_1 = "ami-xxxxxxxx"
+
+# HTTPS — Let's Encrypt + ACM import (see docs/AWS_DEPLOYMENT.md, scripts/tls/renew_le_import_acm.sh)
+create_alb_certificate  = false
+alb_ssl_certificate_arn = null # e.g. arn:aws:acm:us-east-1:928475551084:certificate/UUID after LE import
+# Do not use create_alb_certificate=true if ACM issuance is blocked by policy.
+
+# High availability (recommended for production)
+asg_desired_capacity = 2
+asg_min_size         = 2
+asg_max_size         = 2
+enable_cloudwatch_alarms = true
+
+os_refresh_enabled = true
+
+common_tags = {
+  Team    = "security-monitoring"
+  Account = "AMS_1590-STG"
+}

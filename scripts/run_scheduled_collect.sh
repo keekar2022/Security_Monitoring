@@ -3,17 +3,69 @@
 # Contact: mukesh.kesharwani@adobe.com
 #
 # Run Trend Micro collectors when schedule is due (daily / weekly / monthly).
+#
+# Usage:
+#   ./scripts/run_scheduled_collect.sh              # local: pass or TRENDMICRO_* env
+#   ./scripts/run_scheduled_collect.sh --ec2        # EC2 cron: Secrets Manager + S3
+#   FORCE_COLLECT=true ./scripts/run_scheduled_collect.sh
 set -euo pipefail
+
+EC2_MODE=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --ec2) EC2_MODE=true ;;
+    -h|--help)
+      cat <<'EOF'
+Usage: ./scripts/run_scheduled_collect.sh [--ec2]
+
+  (default)  Laptop: pass or TRENDMICRO_*_API_TOKEN env; optional sync_metrics_s3.sh
+  --ec2      Production EC2: deploy.env + Secrets Manager + go collector --publish-s3
+
+Environment: FORCE_COLLECT, SECMON_USE_COLLECTOR, METRICS_S3_BUCKET, DATA_DIR, USE_PASS
+EOF
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1 (try --help)" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+if [[ "$EC2_MODE" == true ]]; then
+  DEPLOY_ENV="${SECMON_DEPLOY_ENV:-/opt/secmon/deploy.env}"
+  if [[ -f "$DEPLOY_ENV" ]]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "$DEPLOY_ENV"
+    set +a
+  fi
+  export DATA_DIR="${DATA_DIR:-/opt/secmon/data}"
+  export COLLECTION_TRIGGER="${COLLECTION_TRIGGER:-ec2-cron}"
+  export USE_PASS="${USE_PASS:-false}"
+  export COLLECTOR_NON_FATAL="${COLLECTOR_NON_FATAL:-true}"
+  export SECMON_USE_COLLECTOR=true
+
+  "$ROOT/scripts/ec2_fetch_secrets.sh"
+
+  set -a
+  # shellcheck source=/dev/null
+  source /run/secmon/collect.env
+  set +a
+
+  export METRICS_S3_BUCKET="${METRICS_S3_BUCKET:?Set METRICS_S3_BUCKET in $DEPLOY_ENV (see user-data)}"
+fi
+
 BIN_DIR="$ROOT/go/bin"
+COLLECTOR="$BIN_DIR/collector"
 DATA_DIR="${DATA_DIR:-$ROOT/data}"
+USE_COLLECTOR="${SECMON_USE_COLLECTOR:-}"
 PYTHON="${PYTHON:-python3}"
 FORCE="${FORCE_COLLECT:-false}"
-AUTO_PUSH="${AUTO_PUSH:-false}"
-PUSH_AFTER_COLLECT="${PUSH_AFTER_COLLECT:-false}"
 TRIGGER="${COLLECTION_TRIGGER:-local}"
 USE_PASS="${USE_PASS:-}"
 
@@ -43,6 +95,54 @@ PY
 
 if [[ ${#ENVIRONMENTS[@]} -eq 0 ]]; then
   die "No environments in config/deployment_config.json"
+fi
+
+# Unified collector path (EC2 / when SECMON_USE_COLLECTOR=true) — S3 via --publish-s3 only
+if [[ "$USE_COLLECTOR" == "true" && -x "$COLLECTOR" ]]; then
+  if [[ "$FORCE" != "true" ]]; then
+    set +e
+    CHECK_OUT="$("$PYTHON" -m monitoring_dashboard.collection_schedule --check 2>&1)"
+    CHECK_CODE=$?
+    set -e
+    echo "$CHECK_OUT"
+    if [[ "$CHECK_CODE" -eq 2 ]]; then
+      echo "Collection skipped (not due)."
+      exit 0
+    fi
+    if [[ "$CHECK_CODE" -ne 0 ]]; then
+      die "Schedule check failed (exit $CHECK_CODE)"
+    fi
+  fi
+  PUBLISH_FLAG=()
+  [[ -n "${METRICS_S3_BUCKET:-}" ]] && PUBLISH_FLAG=(--publish-s3)
+  NON_FATAL_FLAG=()
+  [[ "${COLLECTOR_NON_FATAL:-}" == "true" ]] && NON_FATAL_FLAG=(--non-fatal)
+  START_TS=$(date +%s)
+  set +e
+  "$COLLECTOR" --run-all --output-dir "$DATA_DIR" --bin-dir "$BIN_DIR" "${PUBLISH_FLAG[@]}" "${NON_FATAL_FLAG[@]}"
+  CODE=$?
+  set -e
+  END_TS=$(date +%s)
+  DURATION=$((END_TS - START_TS))
+  if [[ "$CODE" -eq 0 ]]; then
+    export COLLECTION_TRIGGER="$TRIGGER"
+    export COLLECTION_DURATION="$DURATION"
+    export COLLECTION_ENV_LIST="${ENVIRONMENTS[*]}"
+    export COLLECTION_FAILED_ENV_LIST=""
+    export COLLECTION_PARTIAL_ENV_LIST=""
+    "$PYTHON" - <<'PY'
+import os
+from monitoring_dashboard.collection_schedule import write_meta_after_success
+envs = [e for e in os.environ.get("COLLECTION_ENV_LIST", "").split() if e]
+write_meta_after_success(
+    environments=envs,
+    duration_seconds=float(os.environ.get("COLLECTION_DURATION", "0")),
+    trigger=os.environ.get("COLLECTION_TRIGGER", "local"),
+)
+print("Wrote collection_meta.json")
+PY
+  fi
+  exit "$CODE"
 fi
 
 if [[ "$FORCE" != "true" ]]; then
@@ -79,11 +179,8 @@ SUCCEEDED_ENVS=()
 FAILED_ENVS=()
 PARTIAL_ENVS=()
 
-# In GitHub Actions, endpoint ASRM may lack permissions; do not fail the whole workflow.
 ENDPOINT_VULN_EXTRA=()
-if [[ "${COLLECTOR_NON_FATAL:-}" == "true" ]] || [[ -n "${GITHUB_ACTIONS:-}" ]]; then
-  ENDPOINT_VULN_EXTRA=(--non-fatal)
-fi
+[[ "${COLLECTOR_NON_FATAL:-}" == "true" ]] && ENDPOINT_VULN_EXTRA=(--non-fatal)
 
 for env in "${ENVIRONMENTS[@]}"; do
   echo "=== Environment: $env ==="
@@ -158,17 +255,7 @@ PY
 
 echo "Collection finished in ${DURATION}s"
 
-if [[ "$AUTO_PUSH" == "true" || "$PUSH_AFTER_COLLECT" == "true" ]]; then
-  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    die "AUTO_PUSH requested but not a git repository"
-  fi
-  BRANCH="$(git branch --show-current)"
-  git add data/*.jsonl data/collection_meta.json 2>/dev/null || true
-  if git diff --cached --quiet; then
-    echo "No data changes to commit."
-  else
-    git commit -m "chore: update security metrics data [skip ci]"
-    git push origin "$BRANCH"
-    echo "Pushed data updates to origin/$BRANCH"
-  fi
+if [[ -n "${METRICS_S3_BUCKET:-}" && "$EC2_MODE" != true ]]; then
+  echo "Publishing metrics to S3..."
+  METRICS_S3_BUCKET="$METRICS_S3_BUCKET" DATA_DIR="$DATA_DIR" "$ROOT/scripts/sync_metrics_s3.sh"
 fi

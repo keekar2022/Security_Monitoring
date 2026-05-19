@@ -17,7 +17,7 @@ This guide covers all configuration aspects for the Trend Micro Vision One API i
 
 ## 📸 Visual Setup Guide
 
-For setup flow and credential storage, see [PASS_AND_CREDENTIALS.md](PASS_AND_CREDENTIALS.md) and [INDEX.md](INDEX.md).
+For credential storage (pass), see [Pass & credentials](#pass--credentials) below and [INDEX.md](INDEX.md).
 
 ---
 
@@ -596,6 +596,67 @@ Save as `validate_config.py` and run:
 ```bash
 python3 validate_config.py
 ```
+
+---
+
+## Pass & credentials
+
+**Pass** (password-store) holds GPG-encrypted API tokens. Set `USE_PASS=true` or rely on auto-detect. Helpers: `scripts/debug/update_pass_credential.sh`, `scripts/debug/verify_pass_tokens.sh`.
+
+```bash
+brew install pass gnupg
+pass init "your-email@example.com"
+echo "TOKEN" | pass insert -e TrendMicro/production/api_token
+pass insert TrendMicro/production/api_base_url
+```
+
+**Critical:** Tokens must be a **single line** (`pass show PATH | wc -l` → `1`). Multi-line entries cause HTTP 401.
+
+**AWS production:** Tokens live in Secrets Manager — `./scripts/migrate_secrets_to_aws.sh` ([AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md)).
+
+---
+
+## API reference
+
+| Feature | API | Purpose |
+|--------|-----|---------|
+| Container vulnerabilities | `GET /beta/containerSecurity/vulnerabilities` | Cluster vuln counts |
+| Endpoint inventory | OAT detections API | Endpoints with recent detections |
+| Device vulnerabilities | ASRM Device Vulnerabilities | Per-device CVE data |
+
+**Base URLs:** US `https://api.xdr.trendmicro.com` · AU `https://api.au.xdr.trendmicro.com` (see `config/environments.json` and pass).
+
+Portal and API counts can differ by filters and timing; use API as source of record for automation.
+
+---
+
+## Monitoring & Grafana
+
+**API server (optional local test):**
+
+```bash
+cd go && make build
+./go/bin/api-server --port 8080 --data-dir ..
+curl http://localhost:8080/health
+```
+
+- Structured JSON logs (`service.name`, `operation`, …) — OpenTelemetry-style.
+- **Promtail:** `config/promtail-config.yaml`
+- **Grafana starter:** `config/grafana-dashboard-container-security.json`
+- **Streamlit dashboard** (`app.py`) displays JSONL + legacy weekly data — not a Grafana replacement.
+
+---
+
+## Go implementation
+
+Production collectors and optional API server are **Go** (`go/Makefile`, `go/bin/`). Config is shared via `config/` and pass.
+
+```bash
+cd go && make collector
+./bin/get_container_vulnerabilities --environment production
+```
+
+See [USER_GUIDE.md](USER_GUIDE.md) and [go/README.md](../go/README.md).
 
 ---
 

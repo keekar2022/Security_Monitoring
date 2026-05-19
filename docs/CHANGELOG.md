@@ -3,6 +3,11 @@
 Summary of changes, fixes, and implementation notes. Replaces WHATS_NEW, FIX_SUMMARY, VIEWER_DATA_DISPLAY_FIX, JSONL_DATA_FIX, CSV_LOADING_UPDATE, GO_BIN_COMMANDS_STATUS, and IMPLEMENTATION_SUMMARY.
 
 Dashboard release version is tracked in the root [`VERSION`](../VERSION) file (currently **2.0.0**). Platform / Go suite may use separate versioning in README.
+## [2.1.0] - 2026-05-19
+
+AWS EC2/ALB deployment, LE ACM import, HA and SSM repair deploy path
+
+
 
 ## [2.0.0] - 2026-05-19
 
@@ -113,8 +118,8 @@ Update the dashboard to show data from Legacy Tool scan results
 
 - **Go implementation**: API server and CLI tools (container vulns, endpoint inventory, endpoint vulns) are the primary implementation. Python/Node/Rust references may remain in docs for context.
 - **Streamlit dashboard**: Trend Micro JSONL tabs plus AEM Gov AU legacy weekly tab; deploy via [STREAMLIT_CLOUD.md](STREAMLIT_CLOUD.md).
-- **Docker**: Image with in-image pass store; `export-pass-for-docker.sh` to bake tokens; sync scripts for Mac/Windows.
-- **Pass & tokens**: Single-line token storage enforced to avoid HTTP 401; helper scripts `update-pass-credential.sh` and `verify_pass_tokens.sh`.
+- **Production deployment**: [AWS_DEPLOYMENT.md](AWS_DEPLOYMENT.md) — EC2, ALB, S3, Secrets Manager (Docker tooling removed from repo).
+- **Pass & tokens**: Single-line token storage enforced to avoid HTTP 401; `scripts/update_pass_credential.sh` and `scripts/verify_pass_tokens.sh`.
 - **Docs**: Consolidated into fewer files (INDEX, QUICK_START_GUIDE, CONFIGURATION, PASS_AND_CREDENTIALS, FEATURES, API_REFERENCE, MONITORING, MIGRATION, BEST_PRACTICES, TROUBLESHOOTING, CHANGELOG, AEM_GOVAU_LEGACY_DASHBOARD).
 
 ---
@@ -125,7 +130,7 @@ Update the dashboard to show data from Legacy Tool scan results
 - **JSONL data**: Correct parsing and field names for Grafana/consumers.
 - **CSV loading**: Consistent headers and encoding.
 - **HTTP 500 handling**: Improved error logging and response body capture for container vulnerability API.
-- **Go binaries**: Built via `go/Makefile`; binaries in `go/bin/`; Docker image includes all CLI tools and pass helpers.
+- **Go binaries**: Built via `go/Makefile`; binaries in `go/bin/`; packaged to S3 for EC2 via `scripts/package_app_release.sh`.
 
 ---
 

@@ -1,12 +1,12 @@
 # Makefile for Trend Micro Integration API - Go Implementation
 
-.PHONY: all build clean test install api-server tools
+.PHONY: all build clean test install api-server tools collector
 
 # Default target
 all: build
 
 # Build all Go tools and API server
-build: tools api-server
+build: tools collector api-server
 
 # Build all command-line tools (viewer data: container vuln, endpoint inventory, endpoint vuln)
 tools:
@@ -16,6 +16,13 @@ tools:
 	@go build -o bin/get_endpoint_stats src/get_endpoint_stats.go
 	@go build -o bin/get_endpoint_vulnerabilities src/get_endpoint_vulnerabilities.go
 	@echo "✅ All tools built successfully"
+
+# EC2 production collector (run-all + optional S3 publish)
+collector: tools
+	@echo "Building collector..."
+	@mkdir -p bin
+	@go build -o bin/collector ./cmd/collector
+	@echo "✅ collector built"
 
 # Build API server
 api-server:

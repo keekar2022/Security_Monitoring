@@ -1,0 +1,6 @@
+# Concept: Mukesh Kesharwani
+# Contact: mukesh.kesharwani@adobe.com
+# Daily Trend Micro collection (06:00 UTC)
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+0 6 * * * root /opt/secmon/app/scripts/ec2_daily_collect.sh >> /var/log/secmon/collect.log 2>&1

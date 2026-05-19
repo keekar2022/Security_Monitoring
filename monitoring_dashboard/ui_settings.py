@@ -61,7 +61,7 @@ def _render_okta_persistence_help() -> None:
         st.warning(
             "Nothing saved yet. **Save configuration** writes `config/auth_config.json` locally. "
             "On **Streamlit Community Cloud**, that file is **lost on every reboot** — "
-            "put `OKTA_*` in **App settings → Secrets** (see `docs/STREAMLIT_CLOUD.md`)."
+            "put `OKTA_*` in **App settings → Secrets** (see `docs/AWS_DEPLOYMENT.md`)."
         )
 
 
